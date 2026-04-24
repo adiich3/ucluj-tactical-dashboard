@@ -138,3 +138,60 @@ else:
     )
 
     st.plotly_chart(fig)
+# =========================
+# U CLUJ VS OPPONENT COMPARISON
+# =========================
+
+st.header("U Cluj vs Opponent Tactical Comparison")
+
+vectors = pd.read_csv("ucluj_match_vectors.csv")
+
+ucluj_vectors = vectors[
+    vectors["match"].str.contains(
+        "Universitatea Cluj",
+        case=False,
+        na=False
+    )
+]
+
+opponent_vectors = ucluj_vectors[
+    ucluj_vectors["match"].str.contains(
+        selected_opponent,
+        case=False,
+        na=False
+    )
+]
+
+if len(opponent_vectors) > 0:
+
+    avg_metrics = opponent_vectors.mean(numeric_only=True)
+
+    comparison_df = pd.DataFrame({
+        "Metric": [
+            "Attack",
+            "Progression",
+            "Possession",
+            "Defense",
+            "Risk"
+        ],
+        "Value": [
+            avg_metrics["attacking_threat_index"],
+            avg_metrics["progression_index"],
+            avg_metrics["possession_security_index"],
+            avg_metrics["defensive_stability_index"],
+            avg_metrics["risk_index"]
+        ]
+    })
+
+    fig_compare = px.bar(
+        comparison_df,
+        x="Metric",
+        y="Value",
+        title="Average Tactical Profile vs Opponent"
+    )
+
+    st.plotly_chart(fig_compare)
+
+else:
+
+    st.warning("No tactical data found vs this opponent")
