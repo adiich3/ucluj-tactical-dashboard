@@ -11,108 +11,78 @@ UCLUJ_TEAM_ID = 60374
 # =========================
 
 player_df = pd.read_csv("player_stats.csv")
-
-# filtrare U Cluj
-
-ucluj_players = player_df[
-    player_df["teamId"] == UCLUJ_TEAM_ID
-].copy()
-
-# filtrare adversari
-
-opponent_players = player_df[
-    player_df["teamId"] != UCLUJ_TEAM_ID
-].copy()
+match_reports = pd.read_csv("match_tactical_reports.csv")
 
 # =========================
-# BASIC CHECK
+# GET OPPONENT LIST
 # =========================
 
-st.header("Opponent Overview")
+ucluj_matches = match_reports[
+    match_reports["match"].str.contains(
+        "Universitatea Cluj",
+        case=False,
+        na=False
+    )
+]
 
-st.write(
-    "Total players:",
-    len(player_df)
-)
+opponents = []
 
-st.write(
-    "Opponent players:",
-    len(opponent_players)
-)
+for m in ucluj_matches["match"]:
+
+    teams = m.split(" - ")
+
+    if len(teams) == 2:
+
+        t1 = teams[0].strip()
+        t2 = teams[1].split(",")[0].strip()
+
+        if "Universitatea Cluj" in t1:
+            opponents.append(t2)
+
+        else:
+            opponents.append(t1)
+
+opponents = sorted(list(set(opponents)))
 
 # =========================
-# TEAM LIST
+# SELECT OPPONENT
 # =========================
 
-teams = (
-    opponent_players
-    .groupby("teamId")
-    .size()
-    .reset_index(name="matches")
-)
+if len(opponents) == 0:
 
-if len(teams) == 0:
-
-    st.warning("No opponent teams found")
+    st.warning("No opponent matches found")
 
 else:
 
-    selected_team = st.selectbox(
-        "Select Opponent Team",
-        teams["teamId"]
+    selected_opponent = st.selectbox(
+        "Select Opponent",
+        opponents
     )
 
-    team_players = opponent_players[
-        opponent_players["teamId"]
-        == selected_team
+    st.header("Matches vs Opponent")
+
+    opponent_matches = ucluj_matches[
+        ucluj_matches["match"].str.contains(
+            selected_opponent,
+            case=False,
+            na=False
+        )
     ]
 
-    # =========================
-    # TEAM STATS
-    # =========================
-
-    st.subheader("Opponent Team Stats")
-
-    goals_sum = team_players["goals"].sum()
-    assists_sum = team_players["assists"].sum()
-    passes_sum = team_players["passes"].sum()
-    interceptions_sum = team_players["interceptions"].sum()
-    recoveries_sum = team_players["recoveries"].sum()
-
-    stats_df = pd.DataFrame({
-        "Metric": [
-            "Goals",
-            "Assists",
-            "Passes",
-            "Interceptions",
-            "Recoveries"
-        ],
-        "Value": [
-            goals_sum,
-            assists_sum,
-            passes_sum,
-            interceptions_sum,
-            recoveries_sum
-        ]
-    })
-
-    fig = px.bar(
-        stats_df,
-        x="Metric",
-        y="Value",
-        title="Opponent Performance Overview"
-    )
-
-    st.plotly_chart(fig)
+    st.dataframe(opponent_matches)
 
     # =========================
-    # TOP PLAYERS
+    # OPPONENT PLAYER STATS
     # =========================
 
-    st.subheader("Top Opponent Players")
+    st.header("Opponent Player Performance")
+
+    opponent_players = player_df[
+        player_df["teamId"] != UCLUJ_TEAM_ID
+    ]
 
     top_players = (
-        team_players
+        opponent_players
         .groupby("playerName")[
             [
                 "goals",
@@ -142,3 +112,29 @@ else:
     st.dataframe(
         top_players.head(10)
     )
+
+    # =========================
+    # MATCH CLUSTER TYPES
+    # =========================
+
+    st.header("Opponent Match Types")
+
+    cluster_counts = (
+        opponent_matches["cluster"]
+        .value_counts()
+        .reset_index()
+    )
+
+    cluster_counts.columns = [
+        "Cluster",
+        "Matches"
+    ]
+
+    fig = px.bar(
+        cluster_counts,
+        x="Cluster",
+        y="Matches",
+        title="Match Types vs Opponent"
+    )
+
+    st.plotly_chart(fig)
