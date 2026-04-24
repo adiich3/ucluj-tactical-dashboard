@@ -7,7 +7,14 @@ st.title("Opponent Analysis")
 
 UCLUJ_TEAM_ID = 60374
 
-# =========================
+
+ucluj_players = player_df[
+    player_df["teamId"] == UCLUJ_TEAM_ID
+].copy()
+
+opponent_players = player_df[
+    player_df["teamId"] != UCLUJ_TEAM_ID
+].copy()# =========================
 # LOAD DATA
 # =========================
 
