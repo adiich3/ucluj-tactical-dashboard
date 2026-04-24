@@ -24,4 +24,6 @@ ucluj_players = player_df[
 
 opponent_players = player_df[
     player_df["teamId"] != UCLUJ_TEAM_ID
-].copy()
+].copy(
+st.write("Total players:", len(player_df))
+st.write("Opponent players:", len(opponent_players))
