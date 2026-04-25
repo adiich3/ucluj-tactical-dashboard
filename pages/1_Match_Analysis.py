@@ -245,102 +245,43 @@ def compute_match_score(
     risk
 ):
 
+    # allow stronger matches to go above 1
+    values = [
+        attack,
+        progression,
+        possession,
+        defense,
+        pressing,
+        final_third
+    ]
+
+    # clamp only extreme outliers
+    values = [min(v, 1.8) for v in values]
+
+    attack, progression, possession, defense, pressing, final_third = values
+
     positive_score = (
-        0.22 * attack
-        +
-        0.16 * progression
-        +
-        0.14 * possession
-        +
-        0.16 * defense
-        +
-        0.12 * pressing
-        +
+        0.22 * attack +
+        0.16 * progression +
+        0.14 * possession +
+        0.16 * defense +
+        0.12 * pressing +
         0.12 * final_third
     )
 
-    risk_penalty = (
-        0.08 * risk
-    )
+    risk_penalty = 0.10 * risk
 
     raw_score = positive_score - risk_penalty
 
-    raw_score = max(
-        0,
-        min(raw_score, 2)
-    )
+    # normalize into realistic football range
+    # expected raw range ~ [0.4 , 1.4]
+    normalized = (raw_score - 0.4) / (1.4 - 0.4)
 
-    return round(
-        raw_score * 5,
-        2
-    )
+    normalized = max(0, min(normalized, 1))
 
+    final_score = round(normalized * 10, 2)
 
-team_score = compute_match_score(
-    norm_attack,
-    norm_progression,
-    norm_possession,
-    norm_defense,
-    norm_pressing,
-    norm_final,
-    norm_risk
-)
-
-# Opponent score is estimated from the opposite tactical picture.
-# It is NOT 10 - team_score.
-opponent_attack = safe_norm(
-    season_avg["defensive_stability_index"],
-    vector_row["defensive_stability_index"]
-)
-
-opponent_progression = safe_norm(
-    season_avg["pressing_recovery_index"],
-    vector_row["pressing_recovery_index"]
-)
-
-opponent_possession = safe_norm(
-    season_avg["possession_security_index"],
-    vector_row["possession_security_index"]
-)
-
-opponent_defense = safe_norm(
-    season_avg["attacking_threat_index"],
-    vector_row["attacking_threat_index"]
-)
-
-opponent_pressing = safe_norm(
-    season_avg["progression_index"],
-    vector_row["progression_index"]
-)
-
-opponent_final = safe_norm(
-    season_avg["final_third_index"],
-    vector_row["final_third_index"]
-)
-
-opponent_risk = safe_norm(
-    vector_row["risk_index"],
-    season_avg["risk_index"]
-)
-
-opponent_score = compute_match_score(
-    opponent_attack,
-    opponent_progression,
-    opponent_possession,
-    opponent_defense,
-    opponent_pressing,
-    opponent_final,
-    opponent_risk
-)
-
-overall_score = round(
-    (team_score + opponent_score) / 2,
-    2
-)
-# =========================
-# MATCH OVERVIEW
-# =========================
-
+    return final_score
 st.header("Match Overview")
 
 cluster_id = int(
