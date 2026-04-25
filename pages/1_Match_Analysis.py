@@ -39,39 +39,8 @@ else:
         "ucluj_match_vectors.csv"
     )
 
-# IMPORTANT
-# incarcam player data aici
-
-player_df = pd.read_csv(
-    "player_stats.csv"
-)
-
 # =========================
-# FILTER U CLUJ
-# =========================
-
-if data_mode == "U Cluj Matches":
-
-    reports = reports[
-        reports["match"]
-        .str.contains(
-            "Universitatea Cluj",
-            case=False,
-            na=False
-        )
-    ].copy()
-
-    vectors = vectors[
-        vectors["match"]
-        .str.contains(
-            "Universitatea Cluj",
-            case=False,
-            na=False
-        )
-    ].copy()
-
-# =========================
-# SYNC
+# SYNC DATASETS
 # =========================
 
 common_matches = set(
@@ -83,18 +52,19 @@ common_matches = set(
 reports = reports[
     reports["match"]
     .isin(common_matches)
-]
+].copy()
 
 vectors = vectors[
     vectors["match"]
     .isin(common_matches)
-]
+].copy()
 
 # =========================
 # MATCH LIST
 # =========================
 
 match_list = sorted(
+
     reports["match"]
     .dropna()
     .unique()
@@ -104,6 +74,10 @@ match_list = sorted(
 st.caption(
     f"Matches loaded: {len(match_list)}"
 )
+
+# =========================
+# SEARCH
+# =========================
 
 search_text = st.text_input(
     "Search Match"
@@ -124,6 +98,10 @@ selected_match = st.selectbox(
     match_list
 )
 
+# =========================
+# MATCH ROWS
+# =========================
+
 match_row = reports[
     reports["match"]
     == selected_match
@@ -135,243 +113,7 @@ vector_row = vectors[
 ].iloc[0]
 
 # =========================
-# PLAYER MATCH FILTER
-# =========================
-
-match_players = player_df[
-    player_df["match"]
-    .str.contains(
-        selected_match.split(",")[0],
-        case=False,
-        na=False
-    )
-].copy()
-
-if "minutesOnField" in match_players.columns:
-
-    match_players = match_players[
-        match_players["minutesOnField"] > 0
-    ]
-
-ucluj_players = match_players[
-    match_players["teamId"]
-    == UCLUJ_TEAM_ID
-]
-
-opponent_players = match_players[
-    match_players["teamId"]
-    != UCLUJ_TEAM_ID
-]
-
-# =========================
-# SEASON BASELINE
-# =========================
-
-season_means = player_df[
-    [
-        "goals",
-        "assists",
-        "shots",
-        "passes",
-        "interceptions",
-        "recoveries"
-    ]
-].mean()
-
-def safe_ratio(val, avg):
-
-    if avg == 0:
-        return 0
-
-    r = val / avg
-
-    if r > 2:
-        r = 2
-
-    if r < 0:
-        r = 0
-
-    return r
-
-def compute_scores(players):
-
-    if len(players) == 0:
-
-        return {
-
-            "attack": 0,
-            "defense": 0,
-            "possession": 0,
-            "control": 0,
-            "overall": 0
-
-        }
-
-    totals = players[
-        [
-            "goals",
-            "assists",
-            "shots",
-            "passes",
-            "interceptions",
-            "recoveries"
-        ]
-    ].sum()
-
-    attack = (
-
-        safe_ratio(
-            totals["goals"],
-            season_means["goals"]
-        )
-
-        +
-
-        safe_ratio(
-            totals["shots"],
-            season_means["shots"]
-        )
-
-    ) / 2
-
-    defense = (
-
-        safe_ratio(
-            totals["interceptions"],
-            season_means["interceptions"]
-        )
-
-        +
-
-        safe_ratio(
-            totals["recoveries"],
-            season_means["recoveries"]
-        )
-
-    ) / 2
-
-    possession = safe_ratio(
-        totals["passes"],
-        season_means["passes"]
-    )
-
-    control = safe_ratio(
-        totals["assists"],
-        season_means["assists"]
-    )
-
-    overall_raw = (
-
-        0.30 * attack +
-
-        0.30 * defense +
-
-        0.20 * possession +
-
-        0.20 * control
-    )
-
-    def scale(x):
-
-        val = x * 5
-
-        if val > 10:
-            val = 10
-
-        return round(val, 2)
-
-    return {
-
-        "attack": scale(attack),
-        "defense": scale(defense),
-        "possession": scale(possession),
-        "control": scale(control),
-        "overall": scale(overall_raw)
-
-    }
-
-ucluj_scores = compute_scores(
-    ucluj_players
-)
-
-opponent_scores = compute_scores(
-    opponent_players
-)
-
-team_score = ucluj_scores["overall"]
-
-opponent_score = opponent_scores["overall"]
-
-overall_score = round(
-    (team_score + opponent_score) / 2,
-    2
-)
-
-# =========================
-# SCORE DISPLAY
-# =========================
-
-st.subheader("Match Scores")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-
-    st.metric(
-        "U Cluj Score",
-        f"{team_score} / 10"
-    )
-
-with col2:
-
-    st.metric(
-        "Opponent Score",
-        f"{opponent_score} / 10"
-    )
-
-with col3:
-
-    st.metric(
-        "Overall Score",
-        f"{overall_score} / 10"
-    )
-
-# =========================
-# COMPONENT CHART
-# =========================
-
-st.header("Team Components")
-
-ucluj_df = pd.DataFrame({
-
-    "Metric": [
-        "Attack",
-        "Defense",
-        "Possession",
-        "Control"
-    ],
-
-    "Score": [
-
-        ucluj_scores["attack"],
-        ucluj_scores["defense"],
-        ucluj_scores["possession"],
-        ucluj_scores["control"]
-
-    ]
-
-})
-
-fig = px.bar(
-    ucluj_df,
-    x="Metric",
-    y="Score"
-)
-
-st.plotly_chart(fig)
-
-# =========================
-# RADAR (ramane)
+# FEATURES
 # =========================
 
 feature_labels = {
@@ -402,26 +144,253 @@ features = list(
     feature_labels.keys()
 )
 
-st.header("Tactical Profile")
+cluster_names = {
 
-radar_df = pd.DataFrame({
+    0: "High Risk Build-up Match",
 
-    "Metric": [
-        feature_labels[f]
-        for f in features
-    ],
+    1: "Low Intensity Match",
 
-    "Value": [
-        vector_row[f]
-        for f in features
-    ]
-})
+    2: "Defensive Pressure Match",
 
-fig = px.line_polar(
-    radar_df,
-    r="Value",
-    theta="Metric",
-    line_close=True
+    3: "Dominant Attacking Match"
+}
+
+# =========================
+# MATCH OVERVIEW
+# =========================
+
+st.header("Match Overview")
+
+cluster_id = int(
+    match_row["cluster"]
 )
 
-st.plotly_chart(fig)
+cluster_label = cluster_names.get(
+    cluster_id,
+    "Unknown"
+)
+
+quality = (
+
+    "GOOD MATCH"
+
+    if match_row[
+        "predicted_quality"
+    ] == 1
+
+    else "BAD MATCH"
+)
+
+st.write(
+    "Match:",
+    selected_match
+)
+
+st.write(
+    "Cluster Type:",
+    cluster_label
+)
+
+st.write(
+    "Predicted Quality:",
+    quality
+)
+
+# =========================
+# SCORE CALCULATION
+# =========================
+
+season_avg = vectors[
+    features
+].mean()
+
+norm_attack = (
+    vector_row[
+        "attacking_threat_index"
+    ]
+    /
+    season_avg[
+        "attacking_threat_index"
+    ]
+)
+
+norm_progression = (
+    vector_row[
+        "progression_index"
+    ]
+    /
+    season_avg[
+        "progression_index"
+    ]
+)
+
+norm_possession = (
+    vector_row[
+        "possession_security_index"
+    ]
+    /
+    season_avg[
+        "possession_security_index"
+    ]
+)
+
+norm_defense = (
+    vector_row[
+        "defensive_stability_index"
+    ]
+    /
+    season_avg[
+        "defensive_stability_index"
+    ]
+)
+
+norm_pressing = (
+    vector_row[
+        "pressing_recovery_index"
+    ]
+    /
+    season_avg[
+        "pressing_recovery_index"
+    ]
+)
+
+norm_final = (
+    vector_row[
+        "final_third_index"
+    ]
+    /
+    season_avg[
+        "final_third_index"
+    ]
+)
+
+norm_risk = (
+    vector_row[
+        "risk_index"
+    ]
+    /
+    season_avg[
+        "risk_index"
+    ]
+)
+
+# =========================
+# TEAM SCORE
+# =========================
+
+attack_score = norm_attack * 10
+defense_score = norm_defense * 10
+possession_score = norm_possession * 10
+progression_score = norm_progression * 10
+
+team_score = (
+
+    attack_score * 0.30 +
+
+    defense_score * 0.25 +
+
+    possession_score * 0.25 +
+
+    progression_score * 0.20
+)
+
+team_score = round(
+    team_score,
+    2
+)
+
+# =========================
+# MATCH SCORE
+# =========================
+
+overall_score = (
+
+    0.20 * norm_attack +
+
+    0.15 * norm_progression +
+
+    0.15 * norm_possession +
+
+    0.15 * norm_defense +
+
+    0.10 * norm_pressing +
+
+    0.10 * norm_final -
+
+    0.15 * norm_risk
+)
+
+overall_score = max(
+    0,
+    overall_score
+)
+
+overall_score = round(
+    overall_score * 5,
+    2
+)
+
+st.subheader("Scores")
+
+col1, col2 = st.columns(2)
+
+with col1:
+
+    st.metric(
+        label="Overall Match Score",
+        value=f"{overall_score} / 10"
+    )
+
+with col2:
+
+    st.metric(
+        label="Team Tactical Score",
+        value=f"{team_score} / 10"
+    )
+
+# =========================
+# SIMILAR MATCHES
+# =========================
+
+st.header(
+    "Most Similar Matches"
+)
+
+vector_matrix = vectors[
+    features
+]
+
+match_index = vectors[
+    vectors["match"]
+    == selected_match
+].index[0]
+
+distances = euclidean_distances(
+
+    [vector_matrix.iloc[match_index]],
+    vector_matrix
+)[0]
+
+similar_df = vectors.copy()
+
+similar_df[
+    "distance"
+] = distances
+
+similar_df = similar_df.sort_values(
+    by="distance"
+)
+
+similar_df = similar_df[
+    similar_df["match"]
+    != selected_match
+]
+
+top_similar = similar_df.head(3)
+
+for _, row in top_similar.iterrows():
+
+    st.write(
+        "-",
+        row["match"]
+    )
