@@ -2,10 +2,51 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+import os
 
 st.title("Player Impact Analysis")
 
+# =========================
+# CONSTANTS
+# =========================
+
 UCLUJ_TEAM_ID = 60374
+
+metrics = [
+
+    "goals",
+    "assists",
+    "shots",
+    "passes",
+    "interceptions",
+    "recoveries"
+
+]
+
+# =========================
+# LOAD MODEL (SAFE PATH)
+# =========================
+
+BASE_DIR = os.path.dirname(
+    os.path.dirname(__file__)
+)
+
+model_path = os.path.join(
+    BASE_DIR,
+    "player_impact_model.pkl"
+)
+
+if not os.path.exists(model_path):
+
+    st.error(
+        "player_impact_model.pkl not found in repository root."
+    )
+
+    st.stop()
+
+model = joblib.load(
+    model_path
+)
 
 # =========================
 # LOAD DATA
@@ -13,14 +54,6 @@ UCLUJ_TEAM_ID = 60374
 
 player_df = pd.read_csv(
     "player_stats.csv"
-)
-
-vectors = pd.read_csv(
-    "ucluj_match_vectors.csv"
-)
-
-model = joblib.load(
-    "player_impact_model.pkl"
 )
 
 # =========================
@@ -39,20 +72,26 @@ def clean_match(col):
 
         .str.replace("_", " ")
 
+        .str.replace("  ", " ")
+
         .str.strip()
 
     )
+
+if "match" not in player_df.columns:
+
+    st.error(
+        "player_stats.csv must contain 'match' column."
+    )
+
+    st.stop()
 
 player_df["match"] = clean_match(
     player_df["match"]
 )
 
-vectors["match"] = clean_match(
-    vectors["match"]
-)
-
 # =========================
-# FILTER U CLUJ
+# FILTER STRICT U CLUJ
 # =========================
 
 ucluj_players = player_df[
@@ -62,6 +101,14 @@ ucluj_players = player_df[
 
 ].copy()
 
+if len(ucluj_players) == 0:
+
+    st.error(
+        "No Universitatea Cluj players found."
+    )
+
+    st.stop()
+
 # =========================
 # MATCH SELECT
 # =========================
@@ -69,14 +116,20 @@ ucluj_players = player_df[
 match_list = sorted(
 
     ucluj_players["match"]
+
     .dropna()
+
     .unique()
 
 )
 
+st.caption(
+    f"U Cluj Matches Loaded: {len(match_list)}"
+)
+
 selected_match = st.selectbox(
 
-    "Select Match",
+    "Select Universitatea Cluj Match",
 
     match_list
 
@@ -89,19 +142,16 @@ match_players = ucluj_players[
 
 ].copy()
 
-metrics = [
+if len(match_players) == 0:
 
-    "goals",
-    "assists",
-    "shots",
-    "passes",
-    "interceptions",
-    "recoveries"
+    st.warning(
+        "No players found for selected match."
+    )
 
-]
+    st.stop()
 
 # =========================
-# BASE MATCH VECTOR
+# BUILD TEAM VECTOR
 # =========================
 
 team_totals = match_players[
@@ -117,7 +167,7 @@ base_score = model.predict(
 )[0]
 
 # =========================
-# PLAYER IMPACT
+# CALCULATE PLAYER IMPACT
 # =========================
 
 impact_rows = []
@@ -169,13 +219,14 @@ impact_df = impact_df.sort_values(
 )
 
 # =========================
-# DISPLAY RESULTS
+# DISPLAY TABLE
 # =========================
 
 st.header("Player Impact Ranking")
 
 st.dataframe(
-    impact_df
+    impact_df,
+    use_container_width=True
 )
 
 # =========================
@@ -231,5 +282,19 @@ st.metric(
     "Impact Score",
 
     best_player["impact_score"]
+
+)
+
+# =========================
+# MATCH SCORE INFO
+# =========================
+
+st.header("Match Tactical Impact")
+
+st.metric(
+
+    "Predicted Team Score",
+
+    round(base_score, 2)
 
 )
