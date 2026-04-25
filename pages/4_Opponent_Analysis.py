@@ -69,7 +69,29 @@ else:
         )
     ]
 
-    st.dataframe(opponent_matches)
+    # =========================
+    # SELECT MATCH OR ALL
+    # =========================
+
+    match_options = ["All Matches"] + sorted(opponent_matches["match"].unique())
+
+    selected_match = st.selectbox(
+        "Select Match",
+        match_options
+    )
+
+    # =========================
+    # FILTER MATCHES
+    # =========================
+
+    if selected_match == "All Matches":
+        filtered_matches = opponent_matches
+    else:
+        filtered_matches = opponent_matches[
+            opponent_matches["match"] == selected_match
+        ]
+
+    st.dataframe(filtered_matches)
 
     # =========================
     # OPPONENT PLAYER STATS
@@ -80,6 +102,15 @@ else:
     opponent_players = player_df[
         player_df["teamId"] != UCLUJ_TEAM_ID
     ]
+
+    if selected_match != "All Matches":
+        opponent_players = opponent_players[
+            opponent_players["match"] == selected_match
+        ]
+    else:
+        opponent_players = opponent_players[
+            opponent_players["match"].isin(filtered_matches["match"])
+        ]
 
     top_players = (
         opponent_players
@@ -109,9 +140,7 @@ else:
         ascending=False
     )
 
-    st.dataframe(
-        top_players.head(10)
-    )
+    st.dataframe(top_players.head(10))
 
     # =========================
     # MATCH CLUSTER TYPES
@@ -120,7 +149,7 @@ else:
     st.header("Opponent Match Types")
 
     cluster_counts = (
-        opponent_matches["cluster"]
+        filtered_matches["cluster"]
         .value_counts()
         .reset_index()
     )
@@ -138,6 +167,7 @@ else:
     )
 
     st.plotly_chart(fig)
+
 # =========================
 # U CLUJ VS OPPONENT COMPARISON
 # =========================
@@ -161,6 +191,11 @@ opponent_vectors = ucluj_vectors[
         na=False
     )
 ]
+
+if selected_match != "All Matches":
+    opponent_vectors = opponent_vectors[
+        opponent_vectors["match"] == selected_match
+    ]
 
 if len(opponent_vectors) > 0:
 
