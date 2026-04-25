@@ -1,0 +1,279 @@
+match,cluster,predicted_quality
+"Universitatea Cluj - Hermannstadt, 3-0",0,1
+"Argeș - Hermannstadt, 3-1",0,1
+"FCS Bucureşti - Universitatea Craiova, 1-0",0,1
+"Universitatea Craiova - Csikszereda Miercurea Ciuc, 5-0",0,1
+"Botoşani - Universitatea Cluj, 1-3",0,1
+"Metaloglobus - Hermannstadt, 1-1",0,1
+"Hermannstadt - Csikszereda Miercurea Ciuc, 0-2",0,1
+"Argeș - FCS Bucureşti, 1-0",0,1
+"CFR Cluj - Metaloglobus, 4-2",0,1
+"Universitatea Cluj - CFR Cluj, 2-1",0,1
+"CFR Cluj - Dinamo Bucureşti, 1-1",0,1
+"Petrolul 52 - Universitatea Cluj, 0-1",0,1
+"UTA Arad - Universitatea Cluj, 0-2",0,1
+"Csikszereda Miercurea Ciuc - Unirea Slobozia, 3-2",0,1
+"Csikszereda Miercurea Ciuc - UTA Arad, 2-0",0,1
+"Rapid Bucureşti - Argeș, 0-0",0,1
+"Hermannstadt - FCS Bucureşti, 3-3",0,1
+"UTA Arad - Hermannstadt, 1-0",0,1
+"Csikszereda Miercurea Ciuc - Universitatea Craiova, 1-2",0,1
+"Argeș - Farul Constanţa, 1-0",0,1
+"Metaloglobus - UTA Arad, 2-2",0,1
+"CFR Cluj - UTA Arad, 1-1",0,1
+"FCS Bucureşti - Metaloglobus, 4-1",0,1
+"Rapid Bucureşti - Hermannstadt, 1-2",0,1
+"Petrolul 52 - Botoşani, 0-0",0,1
+"Oţelul - Farul Constanţa, 2-2",0,1
+"Botoşani - Farul Constanţa, 1-1",0,1
+"Universitatea Craiova - Argeș, 3-1",0,1
+"Farul Constanţa - CFR Cluj, 1-2",0,1
+"Dinamo Bucureşti - Hermannstadt, 2-0",0,1
+"Oţelul - Metaloglobus, 4-0",0,1
+"Rapid Bucureşti - FCS Bucureşti, 2-2",0,1
+"Botoşani - Oţelul, 0-0",0,1
+"Petrolul 52 - CFR Cluj, 1-0",0,1
+"Petrolul 52 - Rapid Bucureşti, 0-1",0,1
+"CFR Cluj - Dinamo Bucureşti, 2-0",0,1
+"Universitatea Cluj - FCS Bucureşti, 0-2",0,1
+"Farul Constanţa - Petrolul 52, 2-1",0,1
+"Botoşani - Argeș, 3-1",0,1
+"Csikszereda Miercurea Ciuc - Metaloglobus, 2-2",0,1
+"Hermannstadt - Botoşani, 3-1",0,1
+"Farul Constanţa - Universitatea Cluj, 0-1",0,1
+"Argeș - Petrolul 52, 0-1",0,1
+"Hermannstadt - CFR Cluj, 0-1",0,1
+"Oţelul - Rapid Bucureşti, 1-1",0,1
+"Petrolul 52 - Universitatea Craiova, 0-4",0,1
+"Unirea Slobozia - Metaloglobus, 2-1",0,1
+"FCS Bucureşti - Argeș, 0-2",0,1
+"Universitatea Craiova - Petrolul 52, 2-0",0,1
+"Universitatea Craiova - Unirea Slobozia, 3-1",0,1
+"Universitatea Craiova - Metaloglobus, 2-1",0,1
+"Hermannstadt - Argeș, 0-1",0,1
+"Petrolul 52 - Dinamo Bucureşti, 0-3",0,1
+"CFR Cluj - Farul Constanţa, 0-2",0,1
+"Argeș - Metaloglobus, 2-1",0,1
+"Metaloglobus - Dinamo Bucureşti, 0-1",0,1
+"Farul Constanţa - Unirea Slobozia, 0-1",0,1
+"UTA Arad - Botoşani, 2-1",0,1
+"Petrolul 52 - FCS Bucureşti, 0-1",0,1
+"Argeș - Oţelul, 2-0",0,1
+"Unirea Slobozia - Botoşani, 0-1",0,1
+"CFR Cluj - Csikszereda Miercurea Ciuc, 3-1",0,1
+"Farul Constanţa - Hermannstadt, 1-1",0,1
+"Argeș - Csikszereda Miercurea Ciuc, 3-1",0,1
+"Universitatea Cluj - CFR Cluj, 2-2",0,1
+"Csikszereda Miercurea Ciuc - Botoşani, 1-0",0,1
+"UTA Arad - CFR Cluj, 0-1",0,1
+"Petrolul 52 - Unirea Slobozia, 1-0",0,1
+"Csikszereda Miercurea Ciuc - Rapid Bucureşti, 0-2",0,1
+"Universitatea Craiova - UTA Arad, 1-2",0,1
+"Unirea Slobozia - Csikszereda Miercurea Ciuc, 6-1",0,1
+"FCS Bucureşti - Botoşani, 2-1",0,1
+"Farul Constanţa - Dinamo Bucureşti, 2-3",0,1
+"Universitatea Craiova - Hermannstadt, 1-0",0,1
+"Dinamo Bucureşti - Rapid Bucureşti, 0-2",0,1
+"Oţelul - Botoşani, 0-1",0,1
+"Hermannstadt - Universitatea Cluj, 2-2",0,1
+"Metaloglobus - Oţelul, 0-1",0,1
+"Metaloglobus - FCS Bucureşti, 2-1",0,1
+"UTA Arad - FCS Bucureşti, 2-4",0,1
+"Dinamo Bucureşti - Universitatea Cluj, 1-0",0,1
+"Petrolul 52 - Oţelul, 0-0",0,1
+"Csikszereda Miercurea Ciuc - Petrolul 52, 1-1",0,1
+"Universitatea Craiova - Dinamo Bucureşti, 2-2",0,1
+"Hermannstadt - Rapid Bucureşti, 0-3",0,1
+"Universitatea Cluj - Dinamo Bucureşti, 0-1",0,1
+"Dinamo Bucureşti - Botoşani, 0-0",0,1
+"Rapid Bucureşti - Oţelul, 0-2",0,1
+"Csikszereda Miercurea Ciuc - Farul Constanţa, 1-0",0,1
+"UTA Arad - Argeș, 3-3",0,1
+"Dinamo Bucureşti - Argeș, 0-1",0,1
+"Farul Constanţa - Botoşani, 2-0",0,1
+"CFR Cluj - FCS Bucureşti, 2-2",0,1
+"Unirea Slobozia - Farul Constanţa, 2-1",0,1
+"Unirea Slobozia - FCS Bucureşti, 0-2",0,1
+"FCS Bucureşti - UTA Arad, 4-0",0,1
+"Universitatea Craiova - Botoşani, 2-0",0,1
+"CFR Cluj - Universitatea Craiova, 2-3",0,1
+"Dinamo Bucureşti - Universitatea Cluj, 2-1",0,1
+"Universitatea Cluj - UTA Arad, 1-1",0,1
+"FCS Bucureşti - UTA Arad, 1-0",0,1
+"Argeș - Unirea Slobozia, 0-0",0,1
+"FCS Bucureşti - CFR Cluj, 1-4",0,1
+"Botoşani - Hermannstadt, 2-0",0,1
+"Botoşani - Rapid Bucureşti, 0-0",0,1
+"Botoşani - Petrolul 52, 0-1",0,1
+"Universitatea Cluj - Argeș, 3-1",0,1
+"FCS Bucureşti - Rapid Bucureşti, 2-1",0,1
+"UTA Arad - Universitatea Craiova, 3-3",0,1
+"Universitatea Craiova - Universitatea Cluj, 2-1",0,1
+"Unirea Slobozia - Dinamo Bucureşti, 0-1",0,1
+"CFR Cluj - Rapid Bucureşti, 1-0",0,1
+"Csikszereda Miercurea Ciuc - Hermannstadt, 2-1",0,1
+"Unirea Slobozia - Petrolul 52, 1-0",0,1
+"Argeș - Botoşani, 0-0",0,1
+"Metaloglobus - Universitatea Craiova, 0-0",0,1
+"Petrolul 52 - UTA Arad, 1-2",0,1
+"FCS Bucureşti - Hermannstadt, 1-1",0,1
+"Petrolul 52 - Csikszereda Miercurea Ciuc, 2-0",0,1
+"Oţelul - Unirea Slobozia, 3-0",0,1
+"Farul Constanţa - Universitatea Craiova, 4-1",0,1
+"Unirea Slobozia - Rapid Bucureşti, 1-2",0,1
+"Universitatea Cluj - Farul Constanţa, 1-0",0,1
+"UTA Arad - Csikszereda Miercurea Ciuc, 0-0",0,1
+"Csikszereda Miercurea Ciuc - Unirea Slobozia, 2-1",0,1
+"Dinamo Bucureşti - Oţelul, 1-0",0,1
+"Hermannstadt - Dinamo Bucureşti, 1-2",0,1
+"Argeș - CFR Cluj, 3-0",0,1
+"Metaloglobus - Argeș, 0-2",0,1
+"Metaloglobus - CFR Cluj, 1-1",0,1
+"Argeș - Universitatea Cluj, 0-1",0,1
+"Csikszereda Miercurea Ciuc - Dinamo Bucureşti, 2-2",0,1
+"Rapid Bucureşti - Csikszereda Miercurea Ciuc, 4-1",0,1
+"FCS Bucureşti - Farul Constanţa, 1-2",0,1
+"FCS Bucureşti - Petrolul 52, 1-1",0,1
+"Rapid Bucureşti - CFR Cluj, 1-1",0,1
+"Oţelul - Universitatea Craiova, 1-0",0,1
+"Petrolul 52 - Csikszereda Miercurea Ciuc, 1-1",0,1
+"UTA Arad - Hermannstadt, 3-2",0,1
+"Botoşani - Metaloglobus, 3-0",0,1
+"UTA Arad - Botoşani, 3-1",0,1
+"Universitatea Craiova - Oţelul, 1-0",0,1
+"Hermannstadt - Farul Constanţa, 1-0_5715729",0,1
+"Farul Constanţa - Unirea Slobozia, 1-1",0,1
+"Argeș - CFR Cluj, 0-1",0,1
+"FCS Bucureşti - Universitatea Cluj, 1-3",0,1
+"Argeș - Rapid Bucureşti, 0-2",0,1
+"Csikszereda Miercurea Ciuc - CFR Cluj, 2-2",0,1
+"Rapid Bucureşti - Petrolul 52, 1-1",0,1
+"Unirea Slobozia - Hermannstadt, 2-3",0,1
+"Rapid Bucureşti - Universitatea Cluj, 1-2",0,1
+"UTA Arad - Oţelul, 0-4",0,1
+"Oţelul - FCS Bucureşti, 1-4",0,1
+"Oţelul - CFR Cluj, 4-1",0,1
+"Argeș - Dinamo Bucureşti, 1-1_5715786",0,1
+"Farul Constanţa - UTA Arad, 1-1",0,1
+"Oţelul - Dinamo Bucureşti, 2-1",0,1
+"CFR Cluj - Oţelul, 1-0",0,1
+"UTA Arad - Metaloglobus, 2-0",0,1
+"Metaloglobus - Botoşani, 0-2",0,1
+"Unirea Slobozia - Petrolul 52, 1-2",0,1
+"Oţelul - Argeș, 2-1",0,1
+"Unirea Slobozia - UTA Arad, 1-3",0,1
+"Hermannstadt - Oţelul, 1-3",0,1
+"Universitatea Craiova - Farul Constanţa, 2-0",0,1
+"Farul Constanţa - Argeș, 0-0",0,1
+"Botoşani - Csikszereda Miercurea Ciuc, 3-1",0,1
+"Universitatea Cluj - Metaloglobus, 3-1",0,1
+"Petrolul 52 - Hermannstadt, 1-1",0,1
+"Dinamo Bucureşti - FCS Bucureşti, 4-3",0,1
+"Botoşani - Dinamo Bucureşti, 1-1",0,1
+"Rapid Bucureşti - Universitatea Craiova, 1-1",0,1
+"CFR Cluj - Botoşani, 3-3",0,1
+"Metaloglobus - Universitatea Cluj, 1-4",0,1
+"Botoşani - FCS Bucureşti, 3-2",0,1
+"CFR Cluj - Universitatea Cluj, 3-2",0,1
+"Unirea Slobozia - Oţelul, 2-1",0,1
+"Farul Constanţa - Oţelul, 3-2",0,1
+"Dinamo Bucureşti - Metaloglobus, 4-0",0,1
+"Universitatea Craiova - Rapid Bucureşti, 1-0",0,1
+"Dinamo Bucureşti - Petrolul 52, 1-1",0,1
+"Oţelul - Hermannstadt, 2-0",0,1
+"Universitatea Cluj - Universitatea Craiova, 4-0",0,1
+"Botoşani - Universitatea Craiova, 1-1",0,1
+"Botoşani - FCS Bucureşti, 3-1",0,1
+"Universitatea Craiova - CFR Cluj, 1-1",0,1
+"Csikszereda Miercurea Ciuc - Farul Constanţa, 1-1",0,1
+"Rapid Bucureşti - Argeș, 2-0",0,1
+"Botoşani - Metaloglobus, 3-2",0,1
+"FCS Bucureşti - Metaloglobus, 0-0",0,1
+"Universitatea Cluj - Csikszereda Miercurea Ciuc, 4-1",0,1
+"Universitatea Cluj - Botoşani, 0-2",0,1
+"UTA Arad - Petrolul 52, 1-0",0,1
+"Universitatea Cluj - Unirea Slobozia, 1-0",0,1
+"FCS Bucureşti - Dinamo Bucureşti, 0-0",0,1
+"Farul Constanţa - FCS Bucureşti, 2-3",0,1
+"Dinamo Bucureşti - Universitatea Craiova, 0-1",0,1
+"Argeș - Dinamo Bucureşti, 1-1",0,1
+"Botoşani - Unirea Slobozia, 4-0",0,1
+"Universitatea Cluj - Oţelul, 4-0",0,1
+"Unirea Slobozia - CFR Cluj, 0-1",0,1
+"Rapid Bucureşti - Dinamo Bucureşti, 3-2",0,1
+"Rapid Bucureşti - Farul Constanţa, 3-1",0,1
+"Petrolul 52 - Hermannstadt, 1-1_5715726",0,1
+"Unirea Slobozia - Argeș, 0-1",0,1
+"Universitatea Craiova - CFR Cluj, 2-0",0,1
+"Metaloglobus - Petrolul 52, 0-3",0,1
+"Universitatea Craiova - Rapid Bucureşti, 2-2",0,1
+"Oţelul - Universitatea Cluj, 1-2",0,1
+"CFR Cluj - Hermannstadt, 2-1",0,1
+"Oţelul - Csikszereda Miercurea Ciuc, 2-3",0,1
+"Farul Constanţa - Metaloglobus, 2-1",0,1
+"Rapid Bucureşti - Metaloglobus, 1-0",0,1
+"Dinamo Bucureşti - CFR Cluj, 2-1",0,1
+"Farul Constanţa - FCS Bucureşti, 1-2",0,1
+"CFR Cluj - Unirea Slobozia, 2-1",0,1
+"FCS Bucureşti - Oţelul, 4-0",0,1
+"Farul Constanţa - Rapid Bucureşti, 3-1",0,1
+"Oţelul - UTA Arad, 1-0",0,1
+"Hermannstadt - Petrolul 52, 1-1",0,1
+"FCS Bucureşti - Csikszereda Miercurea Ciuc, 1-0",0,1
+"Rapid Bucureşti - UTA Arad, 2-0",0,1
+"Universitatea Cluj - Rapid Bucureşti, 0-0",0,1
+"Botoşani - UTA Arad, 2-1",0,1
+"UTA Arad - Metaloglobus, 5-1",0,1
+"Hermannstadt - Universitatea Craiova, 0-2",0,1
+"Dinamo Bucureşti - Csikszereda Miercurea Ciuc, 4-0",0,1
+"FCS Bucureşti - Oţelul, 1-0",0,1
+"UTA Arad - Unirea Slobozia, 1-1",0,1
+"Unirea Slobozia - Universitatea Cluj, 0-1",0,1
+"Hermannstadt - Farul Constanţa, 1-0",0,1
+"Oţelul - Petrolul 52, 0-0",0,1
+"Rapid Bucureşti - Universitatea Cluj, 0-2",0,1
+"Oţelul - Csikszereda Miercurea Ciuc, 3-0",0,1
+"Farul Constanţa - Csikszereda Miercurea Ciuc, 3-0",0,1
+"Argeș - Universitatea Cluj, 1-0",0,1
+"Metaloglobus - Rapid Bucureşti, 1-2",0,1
+"Hermannstadt - Unirea Slobozia, 0-2",0,1
+"Universitatea Cluj - Petrolul 52, 1-1",0,1
+"UTA Arad - Rapid Bucureşti, 1-2",0,1
+"Unirea Slobozia - Universitatea Craiova, 0-3",0,1
+"Botoşani - Unirea Slobozia, 3-2",0,1
+"Metaloglobus - Petrolul 52, 1-0",0,1
+"Dinamo Bucureşti - Farul Constanţa, 1-1",0,1
+"FCS Bucureşti - Unirea Slobozia, 0-1",0,1
+"Unirea Slobozia - Oţelul, 0-0",0,1
+"Argeș - UTA Arad, 0-1",0,1
+"Csikszereda Miercurea Ciuc - Oţelul, 1-1",0,1
+"Rapid Bucureşti - Dinamo Bucureşti, 2-1",0,1
+"Argeș - Universitatea Craiova, 1-2",0,1
+"Petrolul 52 - Metaloglobus, 4-1",0,1
+"Csikszereda Miercurea Ciuc - Universitatea Cluj, 2-1",0,1
+"UTA Arad - Farul Constanţa, 2-1",0,1
+"Oţelul - Hermannstadt, 0-2",0,1
+"Metaloglobus - Farul Constanţa, 2-1",0,1
+"Metaloglobus - Csikszereda Miercurea Ciuc, 0-1",0,1
+"Dinamo Bucureşti - UTA Arad, 1-1",0,1
+"Hermannstadt - Metaloglobus, 2-2",0,1
+"Csikszereda Miercurea Ciuc - Argeș, 0-2",0,1
+"Dinamo Bucureşti - Unirea Slobozia, 1-0",0,1
+"Metaloglobus - Unirea Slobozia, 2-3",0,1
+"Hermannstadt - UTA Arad, 1-2",0,1
+"UTA Arad - Dinamo Bucureşti, 2-0",0,1
+"Oţelul - UTA Arad, 2-2",0,1
+"Csikszereda Miercurea Ciuc - FCS Bucureşti, 1-1",0,1
+"Universitatea Craiova - Argeș, 0-1",0,1
+"Metaloglobus - Csikszereda Miercurea Ciuc, 0-1_5715873",0,1
+"CFR Cluj - Argeș, 0-2",0,1
+"Petrolul 52 - Farul Constanţa, 0-1",0,1
+"CFR Cluj - Rapid Bucureşti, 3-0",0,1
+"Farul Constanţa - Petrolul 52, 2-0",0,1
+"Rapid Bucureşti - Botoşani, 2-1",0,1
+"Rapid Bucureşti - Unirea Slobozia, 4-1",0,1
+"CFR Cluj - Petrolul 52, 2-1",0,1
+"Hermannstadt - Botoşani, 3-0",0,1
+"Dinamo Bucureşti - Universitatea Craiova, 1-1",0,1
+"Universitatea Cluj - Universitatea Craiova, 0-0",0,1
+"Petrolul 52 - Argeș, 2-1",0,1

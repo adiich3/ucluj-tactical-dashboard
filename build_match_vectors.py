@@ -2,107 +2,127 @@ import os
 import json
 import pandas as pd
 
-MATCH_FOLDER = "date - meciuri-final"
-OUTPUT_FILE = "ucluj_match_vectors.csv"
-
+DATA_FOLDER = "date - meciuri-final"
 UCLUJ_TEAM_ID = 60374
 
-rows = []
+all_vectors = []
+all_reports = []
 
-def get_stat(player, key):
+files = os.listdir(DATA_FOLDER)
 
-    total = player.get("total", {})
-    return total.get(key, 0)
+print("Total files found:", len(files))
 
+for file in files:
 
-for filename in os.listdir(MATCH_FOLDER):
-
-    if not filename.endswith(".json"):
+    if not file.endswith(".json"):
         continue
 
-    filepath = os.path.join(MATCH_FOLDER, filename)
+    path = os.path.join(DATA_FOLDER, file)
 
-    with open(filepath, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
 
-    players = data.get("players", [])
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-    ucluj_players = []
+    except Exception as e:
 
-    for p in players:
+        print("Error reading:", file)
+        continue
 
-        if p.get("teamId") == UCLUJ_TEAM_ID:
-            ucluj_players.append(p)
+    players = []
 
-    if len(ucluj_players) == 0:
+    for p in data:
+
+        if "teamId" not in p:
+            continue
+
+        if p["teamId"] == UCLUJ_TEAM_ID:
+
+            players.append(p)
+
+    if len(players) == 0:
         continue
 
     progression = 0
     risk = 0
     final_third = 0
-    defensive = 0
+    defense = 0
     pressing = 0
     possession = 0
-    attacking = 0
+    attack = 0
 
-    for player in ucluj_players:
+    for p in players:
 
-        progression += (
-            get_stat(player, "progressivePasses")
-            + get_stat(player, "passesToFinalThird")
-            + get_stat(player, "successfulVerticalPasses")
+        progression += p.get("passes", 0)
+
+        risk += p.get("losses", 0)
+
+        final_third += p.get("shots", 0)
+
+        defense += (
+            p.get("interceptions", 0)
+            + p.get("recoveries", 0)
         )
 
-        risk += (
-            get_stat(player, "losses")
-            + 2 * get_stat(player, "ownHalfLosses")
-            + 4 * get_stat(player, "dangerousOwnHalfLosses")
+        pressing += p.get("interceptions", 0)
+
+        possession += p.get("passes", 0)
+
+        attack += (
+            p.get("goals", 0)
+            + p.get("assists", 0)
         )
 
-        final_third += (
-            get_stat(player, "touchInBox")
-            + get_stat(player, "keyPasses")
-            + get_stat(player, "shotsOnTarget")
-        )
+    match_name = file.replace("_players_stats.json", "")
 
-        defensive += (
-            get_stat(player, "recoveries")
-            + get_stat(player, "interceptions")
-            + get_stat(player, "clearances")
-        )
+    vector = {
 
-        pressing += (
-            get_stat(player, "pressingDuelsWon")
-            + get_stat(player, "counterpressingRecoveries")
-        )
+        "match": match_name,
 
-        possession += (
-            get_stat(player, "successfulPasses")
-            - get_stat(player, "losses")
-        )
-
-        attacking += (
-            get_stat(player, "xgShot")
-            + get_stat(player, "xgAssist")
-            + get_stat(player, "shots")
-        )
-
-    row = {
-        "match": filename,
         "progression_index": progression,
+
         "risk_index": risk,
+
         "final_third_index": final_third,
-        "defensive_stability_index": defensive,
+
+        "defensive_stability_index": defense,
+
         "pressing_recovery_index": pressing,
+
         "possession_security_index": possession,
-        "attacking_threat_index": attacking
+
+        "attacking_threat_index": attack
+
     }
 
-    rows.append(row)
+    all_vectors.append(vector)
 
-df = pd.DataFrame(rows)
+    report = {
 
-df.to_csv(OUTPUT_FILE, index=False)
+        "match": match_name,
 
-print("Vectori tactici generati.")
-print("Numar meciuri U Cluj:", len(df))
+        "cluster": 0,
+
+        "predicted_quality": 0
+
+    }
+
+    all_reports.append(report)
+
+print("Processed matches:", len(all_vectors))
+
+vectors_df = pd.DataFrame(all_vectors)
+
+reports_df = pd.DataFrame(all_reports)
+
+vectors_df.to_csv(
+    "ucluj_match_vectors.csv",
+    index=False
+)
+
+reports_df.to_csv(
+    "match_tactical_reports.csv",
+    index=False
+)
+
+print("CSV files generated successfully")
