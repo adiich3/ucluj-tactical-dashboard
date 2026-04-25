@@ -69,29 +69,7 @@ else:
         )
     ]
 
-    # =========================
-    # SELECT MATCH OR ALL
-    # =========================
-
-    match_options = ["All Matches"] + sorted(opponent_matches["match"].unique())
-
-    selected_match = st.selectbox(
-        "Select Match",
-        match_options
-    )
-
-    # =========================
-    # DISPLAY MATCHES
-    # =========================
-
-    if selected_match == "All Matches":
-        st.dataframe(opponent_matches)
-    else:
-        st.dataframe(
-            opponent_matches[
-                opponent_matches["match"] == selected_match
-            ]
-        )
+    st.dataframe(opponent_matches)
 
     # =========================
     # OPPONENT PLAYER STATS
@@ -160,7 +138,6 @@ else:
     )
 
     st.plotly_chart(fig)
-
 # =========================
 # U CLUJ VS OPPONENT COMPARISON
 # =========================
