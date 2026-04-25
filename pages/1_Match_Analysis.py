@@ -27,6 +27,9 @@ if data_mode == "All Matches":
         "all_match_vectors.csv"
     )
 
+    player_df = pd.read_csv(
+    "player_stats.csv"
+)
 else:
 
     reports = pd.read_csv(
@@ -234,52 +237,92 @@ norm_risk = safe_norm(
 )
 
 # =========================
-# TEAM SCORE
+# PLAYER BASED TEAM SCORES
 # =========================
 
-raw_team_score = (
+UCLUJ_TEAM_ID = 60374
 
-    0.20 * norm_attack +
+match_players = player_df[
+    player_df["match"]
+    == selected_match
+].copy()
 
-    0.15 * norm_progression +
+# filtram doar jucatori care au jucat
 
-    0.15 * norm_possession +
+if "minutesOnField" in match_players.columns:
 
-    0.15 * norm_defense +
+    match_players = match_players[
+        match_players["minutesOnField"]
+        > 0
+    ]
 
-    0.10 * norm_pressing +
+ucluj_players = match_players[
+    match_players["teamId"]
+    == UCLUJ_TEAM_ID
+]
 
-    0.10 * norm_final -
+opponent_players = match_players[
+    match_players["teamId"]
+    != UCLUJ_TEAM_ID
+]
 
-    0.15 * norm_risk
+def compute_team_score(players):
+
+    if len(players) == 0:
+        return 0
+
+    metrics = [
+
+        "goals",
+        "assists",
+        "shots",
+        "passes",
+        "interceptions",
+        "recoveries"
+
+    ]
+
+    score = 0
+
+    if "goals" in players.columns:
+        score += players["goals"].sum() * 1.5
+
+    if "assists" in players.columns:
+        score += players["assists"].sum() * 1.2
+
+    if "shots" in players.columns:
+        score += players["shots"].sum() * 0.5
+
+    if "passes" in players.columns:
+        score += players["passes"].sum() * 0.01
+
+    if "interceptions" in players.columns:
+        score += players["interceptions"].sum() * 0.8
+
+    if "recoveries" in players.columns:
+        score += players["recoveries"].sum() * 0.6
+
+    # normalizare
+
+    score = score / 10
+
+    if score > 10:
+        score = 10
+
+    return round(score, 2)
+
+team_score = compute_team_score(
+    ucluj_players
 )
 
-if raw_team_score < 0:
-    raw_team_score = 0
-
-if raw_team_score > 2:
-    raw_team_score = 2
-
-team_score = round(
-    raw_team_score * 5,
-    2
+opponent_score = compute_team_score(
+    opponent_players
 )
-
-# =========================
-# OPPONENT SCORE
-# =========================
-
-opponent_score = round(
-    10 - team_score,
-    2
-)
-
-# =========================
-# OVERALL SCORE
-# =========================
 
 overall_score = round(
+
     (team_score + opponent_score) / 2,
+
     2
 )
 
