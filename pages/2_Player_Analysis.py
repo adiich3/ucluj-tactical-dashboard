@@ -22,14 +22,25 @@ metrics = [
     "recoveries"
 ]
 
+metric_labels = {
+    "goals": "Goals",
+    "assists": "Assists",
+    "shots": "Shots",
+    "passes": "Passing",
+    "interceptions": "Interceptions",
+    "recoveries": "Recoveries"
+}
+
 # =========================
-# POSITION FILTER
+# FILTERS
 # =========================
 
 st.header("Filters")
 
 positions = sorted(
-    ucluj_players["position"].unique()
+    ucluj_players["position"]
+    .dropna()
+    .unique()
 )
 
 selected_position = st.selectbox(
@@ -37,16 +48,139 @@ selected_position = st.selectbox(
     ["All"] + positions
 )
 
+analysis_mode = st.radio(
+    "Select Analysis Type",
+    [
+        "Overall Player Analysis",
+        "Single Match Player Analysis"
+    ]
+)
+
+base_players = ucluj_players.copy()
+
+if analysis_mode == "Single Match Player Analysis":
+
+    if "match" in ucluj_players.columns:
+
+        match_list = sorted(
+            ucluj_players["match"]
+            .dropna()
+            .unique()
+        )
+
+        selected_match = st.selectbox(
+            "Select Match",
+            match_list
+        )
+
+        base_players = ucluj_players[
+            ucluj_players["match"] == selected_match
+        ].copy()
+
+    else:
+
+        st.warning(
+            "The dataset does not contain a 'match' column."
+        )
+
 if selected_position != "All":
 
-    filtered_players = ucluj_players[
-        ucluj_players["position"]
-        == selected_position
-    ]
+    filtered_players = base_players[
+        base_players["position"] == selected_position
+    ].copy()
 
 else:
 
-    filtered_players = ucluj_players
+    filtered_players = base_players.copy()
+
+if len(filtered_players) == 0:
+
+    st.warning("No players found for the selected filters.")
+    st.stop()
+
+# =========================
+# SINGLE MATCH SUMMARY
+# =========================
+
+if analysis_mode == "Single Match Player Analysis":
+
+    st.header("Selected Match Player Overview")
+
+    display_columns = [
+        "playerName",
+        "position",
+        "goals",
+        "assists",
+        "shots",
+        "passes",
+        "interceptions",
+        "recoveries"
+    ]
+
+    available_columns = [
+        col for col in display_columns
+        if col in filtered_players.columns
+    ]
+
+    st.dataframe(
+        filtered_players[available_columns]
+    )
+
+    st.subheader("Best Players in This Match")
+
+    match_players = filtered_players.copy()
+
+    match_players["performance_score"] = (
+        match_players["goals"] * 4
+        +
+        match_players["assists"] * 3
+        +
+        match_players["shots"] * 1
+        +
+        match_players["passes"] * 0.03
+        +
+        match_players["interceptions"] * 1.5
+        +
+        match_players["recoveries"] * 1.2
+    )
+
+    best_match_players = (
+        match_players
+        .sort_values(
+            by="performance_score",
+            ascending=False
+        )
+        .head(5)
+    )
+
+    st.dataframe(
+        best_match_players[
+            [
+                "playerName",
+                "position",
+                "performance_score",
+                "goals",
+                "assists",
+                "shots",
+                "passes",
+                "interceptions",
+                "recoveries"
+            ]
+        ]
+    )
+
+    fig_match = px.bar(
+        best_match_players,
+        x="playerName",
+        y="performance_score",
+        color="position",
+        title="Top Player Performance in Selected Match"
+    )
+
+    st.plotly_chart(
+        fig_match,
+        use_container_width=True
+    )
 
 # =========================
 # TOP PLAYER METRICS
@@ -64,7 +198,6 @@ top_goals = (
 )
 
 st.subheader("Top Goal Scorers")
-
 st.dataframe(top_goals)
 
 top_assists = (
@@ -77,7 +210,6 @@ top_assists = (
 )
 
 st.subheader("Top Assist Providers")
-
 st.dataframe(top_assists)
 
 top_defensive = (
@@ -90,7 +222,6 @@ top_defensive = (
 )
 
 st.subheader("Top Defensive Players")
-
 st.dataframe(top_defensive)
 
 # =========================
@@ -114,100 +245,97 @@ for m in metrics:
 # PLAYER PROGRESSION
 # =========================
 
-progression_rows = []
+if analysis_mode == "Overall Player Analysis":
 
-for player in norm_players["playerName"].unique():
+    progression_rows = []
 
-    p_data = norm_players[
-        norm_players["playerName"] == player
-    ]
+    for player in norm_players["playerName"].unique():
 
-    if len(p_data) < 4:
-        continue
+        p_data = norm_players[
+            norm_players["playerName"] == player
+        ].copy()
 
-    if "match" not in p_data.columns:
-        continue
+        if len(p_data) < 4:
+            continue
 
-    p_data = p_data.sort_values(
-        by="match"
-    )
+        if "match" not in p_data.columns:
+            continue
 
-    half = len(p_data) // 2
-
-    first_half = p_data.iloc[:half]
-    second_half = p_data.iloc[-half:]
-
-    change_total = 0
-
-    for m in metrics:
-
-        change_total += (
-            second_half[m].mean()
-            -
-            first_half[m].mean()
+        p_data = p_data.sort_values(
+            by="match"
         )
 
-    progression_rows.append({
-        "playerName": player,
-        "position": p_data["position"].iloc[0],
-        "progress_score": round(
-            change_total,
-            3
+        half = len(p_data) // 2
+
+        first_half = p_data.iloc[:half]
+        second_half = p_data.iloc[-half:]
+
+        change_total = 0
+
+        for m in metrics:
+
+            change_total += (
+                second_half[m].mean()
+                -
+                first_half[m].mean()
+            )
+
+        progression_rows.append({
+            "playerName": player,
+            "position": p_data["position"].iloc[0],
+            "progress_score": round(
+                change_total,
+                3
+            )
+        })
+
+    progression_df = pd.DataFrame(
+        progression_rows
+    )
+
+    if len(progression_df) > 0:
+
+        progression_df = progression_df.sort_values(
+            by="progress_score",
+            ascending=False
         )
-    })
 
-progression_df = pd.DataFrame(
-    progression_rows
-)
+        st.header("Player Progression")
 
-if len(progression_df) > 0:
+        st.subheader("Top Improving")
 
-    progression_df = progression_df.sort_values(
-        by="progress_score",
-        ascending=False
-    )
+        st.dataframe(
+            progression_df.head(5)
+        )
 
-    st.header("Player Progression")
+        st.subheader("Top Regressing")
 
-    st.subheader("Top Improving")
+        st.dataframe(
+            progression_df.tail(5)
+        )
 
-    st.dataframe(
-        progression_df.head(5)
-    )
+        st.header("Export Data")
 
-    st.subheader("Top Regressing")
+        csv = progression_df.to_csv(
+            index=False
+        ).encode("utf-8")
 
-    st.dataframe(
-        progression_df.tail(5)
-    )
-
-# =========================
-# EXPORT CSV
-# =========================
-
-st.header("Export Data")
-
-if len(progression_rows) > 0:
-
-    csv = progression_df.to_csv(
-        index=False
-    ).encode("utf-8")
-
-    st.download_button(
-        label="Download Progression Report",
-        data=csv,
-        file_name="player_progression_report.csv",
-        mime="text/csv"
-    )
+        st.download_button(
+            label="Download Progression Report",
+            data=csv,
+            file_name="player_progression_report.csv",
+            mime="text/csv"
+        )
 
 # =========================
-# PLAYER RADAR (FIXED)
+# PLAYER RADAR
 # =========================
 
 st.header("Player Radar")
 
 player_list = sorted(
     filtered_players["playerName"]
+    .dropna()
     .unique()
 )
 
@@ -217,21 +345,12 @@ selected_player = st.selectbox(
     key="radar_player"
 )
 
-# Aggregate per player
-
 player_summary = (
-
     filtered_players
-
     .groupby("playerName")[metrics]
-
     .mean()
-
     .reset_index()
-
 )
-
-# Normalize values
 
 norm_summary = player_summary.copy()
 
@@ -242,21 +361,12 @@ for m in metrics:
     if max_val > 0:
 
         norm_summary[m] = (
-
-            norm_summary[m]
-
-            /
-
+            norm_summary[m] /
             max_val
-
         )
 
 selected_row = norm_summary[
-
-    norm_summary["playerName"]
-
-    == selected_player
-
+    norm_summary["playerName"] == selected_player
 ]
 
 radar_values = []
@@ -264,20 +374,13 @@ radar_values = []
 for m in metrics:
 
     radar_values.append(
-
         selected_row[m].values[0]
-
     )
 
 radar_df = pd.DataFrame({
 
     "Metric": [
-        "Goals",
-        "Assists",
-        "Shots",
-        "Passing",
-        "Interceptions",
-        "Recoveries"
+        metric_labels[m] for m in metrics
     ],
 
     "Value": radar_values
@@ -285,15 +388,10 @@ radar_df = pd.DataFrame({
 })
 
 fig_radar = px.line_polar(
-
     radar_df,
-
     r="Value",
-
     theta="Metric",
-
     line_close=True
-
 )
 
 fig_radar.update_traces(
@@ -373,7 +471,10 @@ fig_compare.update_traces(
     fill="toself"
 )
 
-st.plotly_chart(fig_compare)
+st.plotly_chart(
+    fig_compare,
+    use_container_width=True
+)
 
 st.subheader("Metric Comparison Table")
 
