@@ -1,10 +1,142 @@
-# =========================
-# PLAYER BASED TEAM SCORES (FULL SYSTEM)
-# =========================
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from sklearn.metrics.pairwise import euclidean_distances
+
+st.title("Match Analysis")
 
 UCLUJ_TEAM_ID = 60374
 
-# gasim jucatorii din meci
+# =========================
+# DATA SOURCE SELECTOR
+# =========================
+
+data_mode = st.radio(
+    "Select Dataset",
+    [
+        "All Matches",
+        "U Cluj Matches"
+    ]
+)
+
+if data_mode == "All Matches":
+
+    reports = pd.read_csv(
+        "all_match_reports.csv"
+    )
+
+    vectors = pd.read_csv(
+        "all_match_vectors.csv"
+    )
+
+else:
+
+    reports = pd.read_csv(
+        "ucluj_match_reports.csv"
+    )
+
+    vectors = pd.read_csv(
+        "ucluj_match_vectors.csv"
+    )
+
+# IMPORTANT
+# incarcam player data aici
+
+player_df = pd.read_csv(
+    "player_stats.csv"
+)
+
+# =========================
+# FILTER U CLUJ
+# =========================
+
+if data_mode == "U Cluj Matches":
+
+    reports = reports[
+        reports["match"]
+        .str.contains(
+            "Universitatea Cluj",
+            case=False,
+            na=False
+        )
+    ].copy()
+
+    vectors = vectors[
+        vectors["match"]
+        .str.contains(
+            "Universitatea Cluj",
+            case=False,
+            na=False
+        )
+    ].copy()
+
+# =========================
+# SYNC
+# =========================
+
+common_matches = set(
+    reports["match"]
+).intersection(
+    set(vectors["match"])
+)
+
+reports = reports[
+    reports["match"]
+    .isin(common_matches)
+]
+
+vectors = vectors[
+    vectors["match"]
+    .isin(common_matches)
+]
+
+# =========================
+# MATCH LIST
+# =========================
+
+match_list = sorted(
+    reports["match"]
+    .dropna()
+    .unique()
+    .tolist()
+)
+
+st.caption(
+    f"Matches loaded: {len(match_list)}"
+)
+
+search_text = st.text_input(
+    "Search Match"
+)
+
+if search_text:
+
+    match_list = [
+
+        m for m in match_list
+
+        if search_text.lower()
+        in m.lower()
+    ]
+
+selected_match = st.selectbox(
+    "Select Match",
+    match_list
+)
+
+match_row = reports[
+    reports["match"]
+    == selected_match
+].iloc[0]
+
+vector_row = vectors[
+    vectors["match"]
+    == selected_match
+].iloc[0]
+
+# =========================
+# PLAYER MATCH FILTER
+# =========================
 
 match_players = player_df[
     player_df["match"]
@@ -14,8 +146,6 @@ match_players = player_df[
         na=False
     )
 ].copy()
-
-# eliminam banca
 
 if "minutesOnField" in match_players.columns:
 
@@ -63,7 +193,7 @@ def safe_ratio(val, avg):
 
     return r
 
-def compute_team_scores(players):
+def compute_scores(players):
 
     if len(players) == 0:
 
@@ -87,10 +217,6 @@ def compute_team_scores(players):
             "recoveries"
         ]
     ].sum()
-
-    # =========================
-    # COMPONENTS
-    # =========================
 
     attack = (
 
@@ -134,10 +260,6 @@ def compute_team_scores(players):
         season_means["assists"]
     )
 
-    # =========================
-    # OVERALL
-    # =========================
-
     overall_raw = (
 
         0.30 * attack +
@@ -147,7 +269,6 @@ def compute_team_scores(players):
         0.20 * possession +
 
         0.20 * control
-
     )
 
     def scale(x):
@@ -162,22 +283,18 @@ def compute_team_scores(players):
     return {
 
         "attack": scale(attack),
-
         "defense": scale(defense),
-
         "possession": scale(possession),
-
         "control": scale(control),
-
         "overall": scale(overall_raw)
 
     }
 
-ucluj_scores = compute_team_scores(
+ucluj_scores = compute_scores(
     ucluj_players
 )
 
-opponent_scores = compute_team_scores(
+opponent_scores = compute_scores(
     opponent_players
 )
 
@@ -215,15 +332,15 @@ with col2:
 with col3:
 
     st.metric(
-        "Overall Match Score",
+        "Overall Score",
         f"{overall_score} / 10"
     )
 
 # =========================
-# COMPONENT SCORES
+# COMPONENT CHART
 # =========================
 
-st.header("Team Component Scores")
+st.header("Team Components")
 
 ucluj_df = pd.DataFrame({
 
@@ -245,71 +362,66 @@ ucluj_df = pd.DataFrame({
 
 })
 
-fig_team = px.bar(
+fig = px.bar(
     ucluj_df,
     x="Metric",
-    y="Score",
-    title="U Cluj Tactical Components"
+    y="Score"
 )
 
-st.plotly_chart(fig_team)
+st.plotly_chart(fig)
 
 # =========================
-# OPPONENT COMPONENTS
+# RADAR (ramane)
 # =========================
 
-st.header("Opponent Component Scores")
+feature_labels = {
 
-opp_df = pd.DataFrame({
+    "progression_index":
+        "Ball Progression",
+
+    "risk_index":
+        "Build-up Risk",
+
+    "final_third_index":
+        "Final Third Presence",
+
+    "defensive_stability_index":
+        "Defensive Stability",
+
+    "pressing_recovery_index":
+        "Pressing Recovery",
+
+    "possession_security_index":
+        "Possession Security",
+
+    "attacking_threat_index":
+        "Attacking Threat"
+}
+
+features = list(
+    feature_labels.keys()
+)
+
+st.header("Tactical Profile")
+
+radar_df = pd.DataFrame({
 
     "Metric": [
-        "Attack",
-        "Defense",
-        "Possession",
-        "Control"
+        feature_labels[f]
+        for f in features
     ],
 
-    "Score": [
-
-        opponent_scores["attack"],
-        opponent_scores["defense"],
-        opponent_scores["possession"],
-        opponent_scores["control"]
-
+    "Value": [
+        vector_row[f]
+        for f in features
     ]
-
 })
 
-fig_opp = px.bar(
-    opp_df,
-    x="Metric",
-    y="Score",
-    title="Opponent Tactical Components"
+fig = px.line_polar(
+    radar_df,
+    r="Value",
+    theta="Metric",
+    line_close=True
 )
 
-st.plotly_chart(fig_opp)
-
-# =========================
-# MATCH QUALITY
-# =========================
-
-if overall_score >= 8:
-
-    quality = "EXCELLENT MATCH"
-
-elif overall_score >= 6.5:
-
-    quality = "GOOD MATCH"
-
-elif overall_score >= 5:
-
-    quality = "AVERAGE MATCH"
-
-else:
-
-    quality = "POOR MATCH"
-
-st.write(
-    "Match Quality:",
-    quality
-)
+st.plotly_chart(fig)
