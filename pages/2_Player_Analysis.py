@@ -9,7 +9,26 @@ UCLUJ_TEAM_ID = 60374
 UCLUJ_NAME = "Universitatea Cluj"
 
 player_df = pd.read_csv("player_stats.csv")
+# =========================
+# CLEAN MATCH NAMES
+# =========================
 
+if "match" in player_df.columns:
+
+    player_df["match"] = (
+
+        player_df["match"]
+        .astype(str)
+
+        .str.replace(".json", "", regex=False)
+
+        .str.replace("_players_stats", "", regex=False)
+
+        .str.replace("_", " ")
+
+        .str.strip()
+    )
+    
 ucluj_players = player_df[
     player_df["teamId"] == UCLUJ_TEAM_ID
 ].copy()
