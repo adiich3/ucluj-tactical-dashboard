@@ -11,19 +11,13 @@ st.title("Match Analysis")
 
 data_mode = st.radio(
     "Select Dataset",
-    [
-        "All Matches",
-        "U Cluj Matches"
-    ]
+    ["All Matches", "U Cluj Matches"]
 )
 
 if data_mode == "All Matches":
-
     reports = pd.read_csv("all_match_reports.csv")
     vectors = pd.read_csv("all_match_vectors.csv")
-
 else:
-
     reports = pd.read_csv("ucluj_match_reports.csv")
     vectors = pd.read_csv("ucluj_match_vectors.csv")
 
@@ -54,14 +48,8 @@ cluster_names = {
 # SAFETY CHECK
 # =========================
 
-required_report_cols = [
-    "match",
-    "cluster"
-]
-
-required_vector_cols = [
-    "match"
-] + features
+required_report_cols = ["match", "cluster"]
+required_vector_cols = ["match"] + features
 
 for col in required_report_cols:
     if col not in reports.columns:
@@ -82,30 +70,20 @@ if data_mode == "U Cluj Matches":
     reports = reports[
         reports["match"]
         .astype(str)
-        .str.contains(
-            "Universitatea Cluj",
-            case=False,
-            na=False
-        )
+        .str.contains("Universitatea Cluj", case=False, na=False)
     ].copy()
 
     vectors = vectors[
         vectors["match"]
         .astype(str)
-        .str.contains(
-            "Universitatea Cluj",
-            case=False,
-            na=False
-        )
+        .str.contains("Universitatea Cluj", case=False, na=False)
     ].copy()
 
 # =========================
 # SYNC DATASETS
 # =========================
 
-common_matches = set(
-    reports["match"]
-).intersection(
+common_matches = set(reports["match"]).intersection(
     set(vectors["match"])
 )
 
@@ -125,7 +103,7 @@ reports = reports.reset_index(drop=True)
 vectors = vectors.reset_index(drop=True)
 
 # =========================
-# MATCH LIST
+# MATCH SELECTOR
 # =========================
 
 match_list = sorted(
@@ -135,9 +113,7 @@ match_list = sorted(
     .tolist()
 )
 
-st.caption(
-    f"Matches loaded: {len(match_list)}"
-)
+st.caption(f"Matches loaded: {len(match_list)}")
 
 search_text = st.text_input("Search Match")
 
@@ -155,10 +131,6 @@ selected_match = st.selectbox(
     "Select Match",
     match_list
 )
-
-# =========================
-# MATCH ROWS
-# =========================
 
 match_row = reports[
     reports["match"] == selected_match
@@ -226,119 +198,94 @@ norm_risk = safe_norm(
 )
 
 # =========================
-# MATCH SCORE
+# SOFASCORE-STYLE SCORE
 # =========================
 
 def compute_match_score(
-    attack,
-    progression,
-    possession,
-    defense,
-    pressing,
-    final_third,
+    shooting,
+    passing,
+    dribbling,
+    defending,
+    goalkeeping,
     risk
 ):
 
-    attack = min(attack, 2.5)
-    progression = min(progression, 2.5)
-    possession = min(possession, 2.5)
-    defense = min(defense, 2.5)
-    pressing = min(pressing, 2.5)
-    final_third = min(final_third, 2.5)
+    shooting = min(shooting, 2.5)
+    passing = min(passing, 2.5)
+    dribbling = min(dribbling, 2.5)
+    defending = min(defending, 2.5)
+    goalkeeping = min(goalkeeping, 2.5)
     risk = min(risk, 2.5)
 
-    positive_score = (
-        attack * 0.24
+    raw_rating = (
+        0.28 * shooting
         +
-        progression * 0.16
+        0.20 * passing
         +
-        possession * 0.13
+        0.18 * dribbling
         +
-        defense * 0.16
+        0.22 * defending
         +
-        pressing * 0.13
-        +
-        final_third * 0.18
-    )
-
-    risk_penalty = risk * 0.08
-
-    raw_score = positive_score - risk_penalty
-
-    intensity_boost = (
-        attack
-        +
-        progression
-        +
-        pressing
-        +
-        final_third
-    ) / 4
-
-    raw_score = raw_score + (intensity_boost - 1) * 0.15
-
-    normalized = (
-        raw_score
+        0.12 * goalkeeping
         -
-        0.45
-    ) / (
-        1.35
-        -
-        0.45
+        0.10 * risk
     )
 
-    normalized = max(
-        0,
-        min(normalized, 1)
-    )
+    rating = 6.5 + (raw_rating - 1.0) * 2.2
 
-    return round(
-        normalized * 10,
-        2
-    )
+    rating = max(3.0, min(rating, 10.0))
 
+    return round(rating, 2)
+
+
+team_shooting = (
+    norm_attack * 0.65
+    +
+    norm_final * 0.35
+)
+
+team_passing = norm_possession
+
+team_dribbling = norm_progression
+
+team_defending = (
+    norm_defense * 0.65
+    +
+    norm_pressing * 0.35
+)
+
+team_goalkeeping = norm_defense
 
 team_score = compute_match_score(
-    norm_attack,
-    norm_progression,
-    norm_possession,
-    norm_defense,
-    norm_pressing,
-    norm_final,
+    team_shooting,
+    team_passing,
+    team_dribbling,
+    team_defending,
+    team_goalkeeping,
     norm_risk
 )
 
-# opponent score is independent, not 10 - team_score
-
-opponent_attack = safe_norm(
+opponent_shooting = safe_norm(
     season_avg["defensive_stability_index"],
     vector_row["defensive_stability_index"]
 )
 
-opponent_progression = safe_norm(
-    season_avg["pressing_recovery_index"],
-    vector_row["pressing_recovery_index"]
-)
-
-opponent_possession = safe_norm(
+opponent_passing = safe_norm(
     season_avg["possession_security_index"],
     vector_row["possession_security_index"]
 )
 
-opponent_defense = safe_norm(
+opponent_dribbling = safe_norm(
+    season_avg["pressing_recovery_index"],
+    vector_row["pressing_recovery_index"]
+)
+
+opponent_defending = safe_norm(
     season_avg["attacking_threat_index"],
     vector_row["attacking_threat_index"]
 )
 
-opponent_pressing = safe_norm(
-    season_avg["progression_index"],
-    vector_row["progression_index"]
-)
-
-opponent_final = safe_norm(
-    season_avg["final_third_index"],
-    vector_row["final_third_index"]
-)
+opponent_goalkeeping = opponent_defending
 
 opponent_risk = safe_norm(
     vector_row["risk_index"],
@@ -346,29 +293,31 @@ opponent_risk = safe_norm(
 )
 
 opponent_score = compute_match_score(
-    opponent_attack,
-    opponent_progression,
-    opponent_possession,
-    opponent_defense,
-    opponent_pressing,
-    opponent_final,
+    opponent_shooting,
+    opponent_passing,
+    opponent_dribbling,
+    opponent_defending,
+    opponent_goalkeeping,
     opponent_risk
 )
 
 overall_score = round(
-    (
-        team_score
-        +
-        opponent_score
-    ) / 2,
+    (team_score + opponent_score) / 2,
     2
 )
 
 # =========================
-# MATCH OVERVIEW
+# QUALITY
 # =========================
 
-st.header("Match Overview")
+if overall_score >= 8:
+    quality = "Excellent Match"
+elif overall_score >= 7:
+    quality = "Good Match"
+elif overall_score >= 6:
+    quality = "Average Match"
+else:
+    quality = "Poor Match"
 
 cluster_id = int(match_row["cluster"])
 
@@ -377,32 +326,15 @@ cluster_label = cluster_names.get(
     "Unknown"
 )
 
-st.write("Match:", selected_match)
-
-st.write(
-    "Cluster Type:",
-    cluster_label
-)
-
-if overall_score >= 8:
-    quality = "EXCELLENT MATCH"
-elif overall_score >= 6.5:
-    quality = "GOOD MATCH"
-elif overall_score >= 5:
-    quality = "AVERAGE MATCH"
-else:
-    quality = "POOR MATCH"
-
-st.write(
-    "Match Quality:",
-    quality
-)
-
 # =========================
-# SCORES
+# MAIN MATCH SUMMARY
 # =========================
 
-st.subheader("Match Scores")
+st.header("Match Summary")
+
+st.write(f"**Match:** {selected_match}")
+st.write(f"**Cluster Type:** {cluster_label}")
+st.write(f"**Match Quality:** {quality}")
 
 col1, col2, col3 = st.columns(3)
 
@@ -425,87 +357,147 @@ with col3:
     )
 
 st.caption(
-    "Scores are calculated independently from tactical indicators. Opponent Score is not 10 minus Team Score."
+    "Scores are inspired by rating systems: shooting, passing, progression, defending, goalkeeping proxy and risk."
 )
 
 # =========================
-# SCORE BREAKDOWN
+# MAIN TACTICAL CHART
 # =========================
 
-st.subheader("Score Breakdown")
+st.header("Key Tactical Profile")
 
-score_breakdown = pd.DataFrame({
-    "Component": [
-        "Attack",
+main_profile_df = pd.DataFrame({
+    "Category": [
+        "Shooting",
+        "Passing",
         "Progression",
-        "Possession",
-        "Defense",
-        "Pressing",
-        "Final Third",
-        "Risk"
+        "Defending",
+        "Goalkeeping Proxy",
+        "Build-up Risk"
     ],
-    "Normalized Value": [
-        norm_attack,
-        norm_progression,
-        norm_possession,
-        norm_defense,
-        norm_pressing,
-        norm_final,
+    "Score": [
+        team_shooting,
+        team_passing,
+        team_dribbling,
+        team_defending,
+        team_goalkeeping,
         norm_risk
     ]
 })
 
-fig_score_breakdown = px.bar(
-    score_breakdown,
-    x="Component",
-    y="Normalized Value",
-    title="Normalized Tactical Components"
+fig_main = px.bar(
+    main_profile_df,
+    x="Category",
+    y="Score",
+    title="Main Tactical Categories"
 )
 
 st.plotly_chart(
-    fig_score_breakdown,
+    fig_main,
     use_container_width=True
 )
 
 # =========================
-# RADAR
+# AI SUMMARY
 # =========================
 
-st.header("Tactical Profile")
+st.header("AI Match Summary")
 
-radar_df = pd.DataFrame({
-    "Metric": [
-        feature_labels[f]
-        for f in features
-    ],
-    "Value": [
-        vector_row[f]
-        for f in features
-    ]
-})
+strength_values = {
+    "Shooting": team_shooting,
+    "Passing": team_passing,
+    "Progression": team_dribbling,
+    "Defending": team_defending,
+    "Pressing Recovery": norm_pressing,
+    "Final Third Presence": norm_final
+}
 
-fig = px.line_polar(
-    radar_df,
-    r="Value",
-    theta="Metric",
-    line_close=True,
-    title="Raw Tactical Vector"
+weakness_values = {
+    "Shooting": team_shooting,
+    "Passing": team_passing,
+    "Progression": team_dribbling,
+    "Defending": team_defending,
+    "Pressing Recovery": norm_pressing,
+    "Final Third Presence": norm_final,
+    "Build-up Risk": 2 - norm_risk
+}
+
+main_strength = max(
+    strength_values,
+    key=strength_values.get
 )
 
-fig.update_traces(
-    fill="toself"
+main_weakness = min(
+    weakness_values,
+    key=weakness_values.get
 )
 
-st.plotly_chart(
-    fig,
-    use_container_width=True
-)
+summary_text = f"""
+This match was classified as **{cluster_label}**.
+
+The strongest tactical area was **{main_strength}**, while the biggest concern was **{main_weakness}**.
+The team rating was **{team_score}/10**, compared with an estimated opponent rating of **{opponent_score}/10**.
+
+"""
+
+if norm_risk > 1.15:
+    summary_text += """
+The main warning sign is the high build-up risk. The team should reduce risky actions in deeper areas and avoid unnecessary losses during progression.
+"""
+
+elif team_shooting < 0.9:
+    summary_text += """
+The main issue is attacking threat. The team reached fewer dangerous situations than expected compared with the season baseline.
+"""
+
+elif team_defending < 0.9:
+    summary_text += """
+The main issue is defensive stability. The team should improve compactness and reduce space between lines.
+"""
+
+else:
+    summary_text += """
+The tactical profile is relatively balanced, with no major structural weakness detected from the available indicators.
+"""
+
+st.markdown(summary_text)
+
+# =========================
+# TAGS
+# =========================
+
+st.subheader("Match Tags")
+
+tags = []
+
+if team_shooting > 1.15:
+    tags.append("Strong Shooting")
+
+if team_passing > 1.15:
+    tags.append("Secure Passing")
+
+if team_dribbling > 1.15:
+    tags.append("Strong Progression")
+
+if team_defending > 1.15:
+    tags.append("Strong Defending")
+
+if norm_pressing > 1.15:
+    tags.append("Good Pressing Recovery")
+
+if norm_risk > 1.15:
+    tags.append("High Build-up Risk")
+
+if len(tags) == 0:
+    tags.append("Balanced Match")
+
+st.write(" • ".join(tags))
 
 # =========================
 # SIMILAR MATCHES
 # =========================
 
-st.header("Most Similar Matches")
+st.header("Similar Matches")
 
 vector_matrix = vectors[features].reset_index(drop=True)
 
@@ -532,249 +524,100 @@ similar_df = similar_df[
 
 top_similar = similar_df.head(3)
 
-for _, row in top_similar.iterrows():
-    st.write("-", row["match"])
+if len(top_similar) == 0:
+    st.write("No similar matches found.")
+else:
+    for _, row in top_similar.iterrows():
+        st.write("-", row["match"])
 
 # =========================
-# MATCH TAGS
+# ADVANCED DETAILS
 # =========================
 
-st.header("Match Tags")
+with st.expander("Advanced tactical charts"):
 
-tags = []
+    st.subheader("Raw Tactical Radar")
 
-if norm_attack > 1.15:
-    tags.append("Strong Attack")
-
-if norm_defense < 0.85:
-    tags.append("Weak Defense")
-
-if norm_risk > 1.15:
-    tags.append("High Risk Build-up")
-
-if norm_progression > 1.15:
-    tags.append("Strong Progression")
-
-if norm_final > 1.15:
-    tags.append("High Final Third Presence")
-
-if norm_pressing > 1.15:
-    tags.append("Strong Pressing / Recovery")
-
-if norm_possession > 1.15:
-    tags.append("Secure Possession")
-
-if len(tags) == 0:
-    tags.append("Balanced Match")
-
-for t in tags:
-    st.write("•", t)
-
-# =========================
-# STRENGTH BREAKDOWN
-# =========================
-
-st.header("Match Strength Breakdown")
-
-strength_df = pd.DataFrame({
-    "Category": [
-        "Attack",
-        "Defense",
-        "Possession",
-        "Progression",
-        "Pressing",
-        "Final Third",
-        "Risk"
-    ],
-    "Strength": [
-        norm_attack,
-        norm_defense,
-        norm_possession,
-        norm_progression,
-        norm_pressing,
-        norm_final,
-        norm_risk
-    ]
-})
-
-fig_strength = px.bar(
-    strength_df,
-    x="Category",
-    y="Strength",
-    title="Match Strengths Relative to Season Average"
-)
-
-st.plotly_chart(
-    fig_strength,
-    use_container_width=True
-)
-
-# =========================
-# TEAM PERFORMANCE SUMMARY
-# =========================
-
-st.header("Team Performance Summary")
-
-summary_df = pd.DataFrame({
-    "Metric": [
-        "Attack",
-        "Defense",
-        "Possession",
-        "Progression",
-        "Pressing",
-        "Final Third"
-    ],
-    "Score": [
-        min(norm_attack * 5, 10),
-        min(norm_defense * 5, 10),
-        min(norm_possession * 5, 10),
-        min(norm_progression * 5, 10),
-        min(norm_pressing * 5, 10),
-        min(norm_final * 5, 10)
-    ]
-})
-
-fig_summary = px.bar(
-    summary_df,
-    x="Metric",
-    y="Score",
-    title="Team Performance Scores"
-)
-
-st.plotly_chart(
-    fig_summary,
-    use_container_width=True
-)
-
-# =========================
-# METRIC COMPARISON VS SEASON
-# =========================
-
-st.header("Metric Comparison vs Season")
-
-comparison_df = pd.DataFrame({
-    "Metric": [
-        feature_labels[f]
-        for f in features
-    ],
-    "Match Value": [
-        vector_row[f]
-        for f in features
-    ],
-    "Season Average": [
-        season_avg[f]
-        for f in features
-    ]
-})
-
-fig_compare = px.bar(
-    comparison_df,
-    x="Metric",
-    y=[
-        "Match Value",
-        "Season Average"
-    ],
-    barmode="group",
-    title="Selected Match vs Season Average"
-)
-
-st.plotly_chart(
-    fig_compare,
-    use_container_width=True
-)
-
-# =========================
-# AI TACTICAL RECOMMENDATIONS
-# =========================
-
-st.header("AI Tactical Recommendations")
-
-recommendations = []
-
-if norm_risk > 1.15:
-    recommendations.append(
-        "Reduce build-up risk in defensive phase."
-    )
-
-if norm_progression < 0.9:
-    recommendations.append(
-        "Increase ball progression tempo."
-    )
-
-if norm_attack < 0.9:
-    recommendations.append(
-        "Improve attacking threat creation."
-    )
-
-if norm_defense < 0.9:
-    recommendations.append(
-        "Strengthen defensive compactness."
-    )
-
-if norm_pressing < 0.9:
-    recommendations.append(
-        "Increase pressing and recovery intensity."
-    )
-
-if norm_possession < 0.9:
-    recommendations.append(
-        "Improve possession security and reduce unnecessary losses."
-    )
-
-if norm_final < 0.9:
-    recommendations.append(
-        "Improve final-third presence."
-    )
-
-if len(recommendations) == 0:
-    recommendations.append(
-        "Stable tactical balance detected."
-    )
-
-for r in recommendations:
-    st.write("-", r)
-
-# =========================
-# STRENGTHS AND WEAKNESSES
-# =========================
-
-st.header("Strengths and Weaknesses")
-
-comparison_values = []
-
-for f in features:
-
-    diff = vector_row[f] - season_avg[f]
-
-    comparison_values.append({
-        "metric": feature_labels[f],
-        "difference": diff
+    radar_df = pd.DataFrame({
+        "Metric": [
+            feature_labels[f]
+            for f in features
+        ],
+        "Value": [
+            vector_row[f]
+            for f in features
+        ]
     })
 
-diff_df = pd.DataFrame(comparison_values)
-
-strengths = diff_df.sort_values(
-    by="difference",
-    ascending=False
-)
-
-weaknesses = diff_df.sort_values(
-    by="difference",
-    ascending=True
-)
-
-st.subheader("Top 3 Strengths")
-
-for i in range(min(3, len(strengths))):
-    st.write(
-        "•",
-        strengths.iloc[i]["metric"]
+    fig_radar = px.line_polar(
+        radar_df,
+        r="Value",
+        theta="Metric",
+        line_close=True,
+        title="Raw Tactical Vector"
     )
 
-st.subheader("Top 3 Weaknesses")
+    fig_radar.update_traces(
+        fill="toself"
+    )
 
-for i in range(min(3, len(weaknesses))):
-    st.write(
-        "•",
-        weaknesses.iloc[i]["metric"]
+    st.plotly_chart(
+        fig_radar,
+        use_container_width=True
+    )
+
+    st.subheader("Metric Comparison vs Season")
+
+    comparison_df = pd.DataFrame({
+        "Metric": [
+            feature_labels[f]
+            for f in features
+        ],
+        "Match Value": [
+            vector_row[f]
+            for f in features
+        ],
+        "Season Average": [
+            season_avg[f]
+            for f in features
+        ]
+    })
+
+    fig_compare = px.bar(
+        comparison_df,
+        x="Metric",
+        y=[
+            "Match Value",
+            "Season Average"
+        ],
+        barmode="group",
+        title="Selected Match vs Season Average"
+    )
+
+    st.plotly_chart(
+        fig_compare,
+        use_container_width=True
+    )
+
+    st.subheader("Detailed Strengths and Weaknesses")
+
+    comparison_values = []
+
+    for f in features:
+
+        diff = vector_row[f] - season_avg[f]
+
+        comparison_values.append({
+            "Metric": feature_labels[f],
+            "Difference vs Season": diff
+        })
+
+    diff_df = pd.DataFrame(comparison_values)
+
+    st.dataframe(
+        diff_df.sort_values(
+            by="Difference vs Season",
+            ascending=False
+        ),
+        use_container_width=True
     )
