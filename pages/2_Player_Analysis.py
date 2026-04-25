@@ -31,10 +31,6 @@ metric_labels = {
     "recoveries": "Recoveries"
 }
 
-# =========================
-# SAFETY CHECK
-# =========================
-
 required_cols = [
     "teamId",
     "playerName",
@@ -42,13 +38,9 @@ required_cols = [
 ] + metrics
 
 for col in required_cols:
-    if col not in ucluj_players.columns:
+    if col not in player_df.columns:
         st.error(f"Missing column: {col}")
         st.stop()
-
-# =========================
-# FILTERS
-# =========================
 
 st.header("Filters")
 
@@ -68,15 +60,15 @@ if analysis_scope == "Single Match":
         st.warning("The dataset does not contain a match column.")
         st.stop()
 
-    match_list = sorted(
+    ucluj_match_list = sorted(
         ucluj_players["match"]
         .dropna()
         .unique()
     )
 
     selected_match = st.selectbox(
-        "Select Match",
-        match_list
+        "Select U Cluj Match",
+        ucluj_match_list
     )
 
     base_players = ucluj_players[
@@ -105,10 +97,6 @@ if len(filtered_players) == 0:
     st.warning("No players found.")
     st.stop()
 
-# =========================
-# PERFORMANCE SCORE
-# =========================
-
 filtered_players["performance_score"] = (
     filtered_players["goals"] * 4
     +
@@ -122,10 +110,6 @@ filtered_players["performance_score"] = (
     +
     filtered_players["recoveries"] * 1.2
 )
-
-# =========================
-# PLAYER SUMMARY
-# =========================
 
 st.header("Player Overview")
 
@@ -163,10 +147,6 @@ player_summary = player_summary.sort_values(
 
 st.dataframe(player_summary)
 
-# =========================
-# TOP PLAYERS
-# =========================
-
 st.header("Top Player Contributions")
 
 top_players = player_summary.head(5)
@@ -183,10 +163,6 @@ st.plotly_chart(
     fig_top,
     use_container_width=True
 )
-
-# =========================
-# SELECT PLAYER
-# =========================
 
 st.header("Individual Player Analysis")
 
@@ -224,15 +200,12 @@ st.metric(
     round(selected_player_data["performance_score"], 2)
 )
 
-# =========================
-# PLAYER RADAR
-# =========================
-
 st.subheader("Player Radar")
 
 radar_values = []
 
 for m in metrics:
+
     max_val = player_summary[m].max()
 
     if max_val > 0:
@@ -264,10 +237,6 @@ st.plotly_chart(
     fig_radar,
     use_container_width=True
 )
-
-# =========================
-# PLAYER COMPARISON
-# =========================
 
 st.header("Player Comparison")
 
@@ -335,16 +304,11 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =========================
-# AI PLAYER INSIGHT
-# =========================
-
 st.header("AI Player Insight")
 
 def generate_player_insight(player):
 
     name = player["playerName"]
-    position = player["position"]
 
     goals = player["goals"]
     assists = player["assists"]
@@ -363,11 +327,9 @@ def generate_player_insight(player):
     if attacking_value >= defensive_value and attacking_value >= possession_value:
         main_role = "attacking contributor"
         strengths.append("strong offensive involvement")
-
     elif defensive_value >= attacking_value and defensive_value >= possession_value:
         main_role = "defensive contributor"
         strengths.append("good defensive activity")
-
     else:
         main_role = "possession-oriented player"
         strengths.append("important in ball circulation")
@@ -395,25 +357,23 @@ def generate_player_insight(player):
         prediction = "Needs improvement or more minutes to become more influential."
 
     insight = f"""
-    {name} is mainly profiled as a **{main_role}** for U Cluj.
+{name} is mainly profiled as a **{main_role}** for U Cluj.
 
-    Main strengths:
-    - {strengths[0]}
-    """
+Main strengths:
+- {strengths[0]}
+"""
 
     if len(strengths) > 1:
-        insight += f"\n    - {strengths[1]}"
+        insight += f"- {strengths[1]}\n"
 
     insight += f"""
 
-    Tactical interpretation:
-    The player contributes with a performance score of **{round(score, 2)}**.
-    Based on the selected data scope, his most relevant contribution comes from
-    attacking, defensive, or possession-related actions.
+Tactical interpretation:
+The player has a performance score of **{round(score, 2)}** in the selected analysis scope.
 
-    Prediction:
-    **{prediction}**
-    """
+Prediction:
+**{prediction}**
+"""
 
     return insight
 
@@ -424,10 +384,6 @@ selected_ai_player = player_summary[
 st.markdown(
     generate_player_insight(selected_ai_player)
 )
-
-# =========================
-# EXPORT
-# =========================
 
 st.header("Export Data")
 
