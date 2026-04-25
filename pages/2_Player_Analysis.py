@@ -144,10 +144,6 @@ filtered_players["performance_score"] = (
 
 st.header("Player Overview")
 
-# IMPORTANT:
-# Full Season = total season statistics, not average
-# Single Match = statistics from selected match
-
 player_summary = (
     filtered_players
     .groupby("playerName")
@@ -359,6 +355,7 @@ st.header("AI Player Insight")
 def generate_player_insight(player):
 
     name = player["playerName"]
+    position = str(player["position"])
 
     goals = player["goals"]
     assists = player["assists"]
@@ -368,68 +365,183 @@ def generate_player_insight(player):
     recoveries = player["recoveries"]
     score = player["performance_score"]
 
-    attacking_value = goals * 4 + assists * 3 + shots
-    defensive_value = interceptions * 1.5 + recoveries * 1.2
-    possession_value = passes * 0.03
+    team_avg = player_summary[
+        metrics + ["performance_score"]
+    ].mean()
 
-    strengths = []
+    team_max = player_summary[
+        metrics + ["performance_score"]
+    ].max()
 
-    if attacking_value >= defensive_value and attacking_value >= possession_value:
-        main_role = "attacking contributor"
-        strengths.append("strong offensive involvement")
+    def level(value, metric):
+        avg = team_avg[metric]
+        max_val = team_max[metric]
 
-    elif defensive_value >= attacking_value and defensive_value >= possession_value:
-        main_role = "defensive contributor"
-        strengths.append("good defensive activity")
+        if max_val == 0:
+            return "low"
+
+        if value >= 0.75 * max_val:
+            return "elite"
+        elif value >= avg:
+            return "above average"
+        elif value > 0:
+            return "limited"
+        else:
+            return "none"
+
+    goal_level = level(goals, "goals")
+    assist_level = level(assists, "assists")
+    shot_level = level(shots, "shots")
+    pass_level = level(passes, "passes")
+    interception_level = level(interceptions, "interceptions")
+    recovery_level = level(recoveries, "recoveries")
+
+    attacking_score = goals * 4 + assists * 3 + shots
+    possession_score = passes * 0.03
+    defensive_score = interceptions * 1.5 + recoveries * 1.2
+
+    profile_parts = {
+        "attacking impact": attacking_score,
+        "possession involvement": possession_score,
+        "defensive contribution": defensive_score
+    }
+
+    main_profile = max(
+        profile_parts,
+        key=profile_parts.get
+    )
+
+    strongest_metric = max(
+        metrics,
+        key=lambda m: player[m]
+    )
+
+    weakest_metric = min(
+        metrics,
+        key=lambda m: player[m]
+    )
+
+    text = f"""
+### {name} — AI Player Profile
+
+**Position:** {position}  
+**Main profile:** {main_profile}  
+**Performance score:** {round(score, 2)}
+
+"""
+
+    position_lower = position.lower()
+
+    if (
+        "forward" in position_lower
+        or "striker" in position_lower
+        or position_lower in ["fw", "st", "attacker"]
+    ):
+
+        if goals > 0:
+            text += f"""
+{name} has a clear attacking profile. His goal output is **{goal_level}** compared with the rest of the U Cluj squad, and his **{int(shots)} shots** show direct involvement in finishing situations.
+"""
+        else:
+            text += f"""
+{name} is listed as an attacking player, but his goal impact is low in the selected scope. His contribution comes more from movement, involvement, or pressing than from finishing.
+"""
+
+        if assists > 0:
+            text += f"""
+He also contributes creatively, with **{int(assists)} assists**, which means he can influence attacks both as a finisher and as a provider.
+"""
+
+    elif (
+        "midfielder" in position_lower
+        or position_lower in ["mf", "cm", "dm", "am"]
+    ):
+
+        if passes >= team_avg["passes"]:
+            text += f"""
+{name} is strongly involved in ball circulation. His passing volume is **{pass_level}**, suggesting that he helps connect phases of play and supports possession.
+"""
+        else:
+            text += f"""
+{name} has a lower passing volume than the squad average, so his role may be more specific, transitional, or less possession-based.
+"""
+
+        if recoveries >= team_avg["recoveries"]:
+            text += f"""
+He also adds value after possession loss, with recoveries rated as **{recovery_level}**, which is important for counter-pressing and transition control.
+"""
+
+        if assists > 0:
+            text += f"""
+His assist output is **{assist_level}**, showing that he can also influence the final third.
+"""
+
+    elif (
+        "defender" in position_lower
+        or position_lower in ["df", "cb", "lb", "rb", "wb"]
+    ):
+
+        if (
+            interceptions >= team_avg["interceptions"]
+            or recoveries >= team_avg["recoveries"]
+        ):
+            text += f"""
+{name} stands out mostly through defensive actions. His interceptions are **{interception_level}**, while recoveries are **{recovery_level}**, showing his defensive presence and ability to regain possession.
+"""
+        else:
+            text += f"""
+{name} has a more positional defensive profile in this scope. His direct defensive numbers are not very high, which may mean he was less exposed or had a more conservative role.
+"""
+
+        if passes >= team_avg["passes"]:
+            text += f"""
+His passing volume is **{pass_level}**, so he may also be relevant in build-up from the back.
+"""
+
+    elif (
+        "goalkeeper" in position_lower
+        or position_lower == "gk"
+    ):
+
+        text += f"""
+{name} is a goalkeeper, so this model cannot fully evaluate his real performance. These metrics only show limited involvement in distribution or possession. A better goalkeeper profile would need saves, goals conceded, claims, crosses stopped, and long-ball accuracy.
+"""
 
     else:
-        main_role = "possession-oriented player"
-        strengths.append("important in ball circulation")
 
-    if goals > 0:
-        strengths.append("goal threat")
+        text += f"""
+{name} has a mixed statistical profile. His strongest visible area is **{strongest_metric}**, while the lowest contribution appears in **{weakest_metric}**.
+"""
 
-    if assists > 0:
-        strengths.append("creative passing")
+    text += f"""
 
-    if recoveries > interceptions:
-        strengths.append("active ball recovery")
+**Metric interpretation:**
+- Goals level: **{goal_level}**
+- Assists level: **{assist_level}**
+- Shots level: **{shot_level}**
+- Passing level: **{pass_level}**
+- Interceptions level: **{interception_level}**
+- Recoveries level: **{recovery_level}**
 
-    if interceptions > recoveries:
-        strengths.append("good anticipation")
+**Strongest statistical signal:** {strongest_metric}  
+**Lowest statistical signal:** {weakest_metric}
 
-    if len(strengths) == 0:
-        strengths.append("limited statistical involvement")
+"""
 
-    if score >= player_summary["performance_score"].quantile(0.75):
-        prediction = "Expected to remain one of the important players in this analysis scope."
-
+    if score >= player_summary["performance_score"].quantile(0.80):
+        text += f"""
+**Prediction:** {name} profiles as one of the key U Cluj players in this scope. If this level continues, he should remain highly relevant for selection.
+"""
     elif score >= player_summary["performance_score"].median():
-        prediction = "Expected to be a useful support or rotation player."
-
+        text += f"""
+**Prediction:** {name} looks like a useful squad player with clear contribution, but not one of the dominant profiles in this scope.
+"""
     else:
-        prediction = "Needs more impact in the selected metrics to stand out."
-
-    insight = f"""
-{name} is mainly profiled as a **{main_role}** for Universitatea Cluj.
-
-Main strengths:
-- {strengths[0]}
+        text += f"""
+**Prediction:** {name} has limited statistical impact in this scope and may need more minutes, a different tactical role, or stronger involvement to stand out.
 """
 
-    if len(strengths) > 1:
-        insight += f"- {strengths[1]}\n"
-
-    insight += f"""
-
-Tactical interpretation:
-The player has a total performance score of **{round(score, 2)}** in the selected analysis scope.
-
-Prediction:
-**{prediction}**
-"""
-
-    return insight
+    return text
 
 selected_ai_player = player_summary[
     player_summary["playerName"] == selected_player
