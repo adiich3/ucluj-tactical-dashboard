@@ -231,48 +231,112 @@ norm_risk = safe_norm(
     vector_row["risk_index"],
     season_avg["risk_index"]
 )
-
 # =========================
 # SCORE
 # =========================
 
-raw_team_score = (
+def compute_match_score(
+    attack,
+    progression,
+    possession,
+    defense,
+    pressing,
+    final_third,
+    risk
+):
 
-    0.20 * norm_attack +
+    positive_score = (
+        0.22 * attack
+        +
+        0.16 * progression
+        +
+        0.14 * possession
+        +
+        0.16 * defense
+        +
+        0.12 * pressing
+        +
+        0.12 * final_third
+    )
 
-    0.15 * norm_progression +
+    risk_penalty = (
+        0.08 * risk
+    )
 
-    0.15 * norm_possession +
+    raw_score = positive_score - risk_penalty
 
-    0.15 * norm_defense +
+    raw_score = max(
+        0,
+        min(raw_score, 2)
+    )
 
-    0.10 * norm_pressing +
+    return round(
+        raw_score * 5,
+        2
+    )
 
-    0.10 * norm_final -
 
-    0.15 * norm_risk
+team_score = compute_match_score(
+    norm_attack,
+    norm_progression,
+    norm_possession,
+    norm_defense,
+    norm_pressing,
+    norm_final,
+    norm_risk
 )
 
-raw_team_score = max(
-    0,
-    min(raw_team_score, 2)
+# Opponent score is estimated from the opposite tactical picture.
+# It is NOT 10 - team_score.
+opponent_attack = safe_norm(
+    season_avg["defensive_stability_index"],
+    vector_row["defensive_stability_index"]
 )
 
-team_score = round(
-    raw_team_score * 5,
-    2
+opponent_progression = safe_norm(
+    season_avg["pressing_recovery_index"],
+    vector_row["pressing_recovery_index"]
 )
 
-opponent_score = round(
-    10 - team_score,
-    2
+opponent_possession = safe_norm(
+    season_avg["possession_security_index"],
+    vector_row["possession_security_index"]
+)
+
+opponent_defense = safe_norm(
+    season_avg["attacking_threat_index"],
+    vector_row["attacking_threat_index"]
+)
+
+opponent_pressing = safe_norm(
+    season_avg["progression_index"],
+    vector_row["progression_index"]
+)
+
+opponent_final = safe_norm(
+    season_avg["final_third_index"],
+    vector_row["final_third_index"]
+)
+
+opponent_risk = safe_norm(
+    vector_row["risk_index"],
+    season_avg["risk_index"]
+)
+
+opponent_score = compute_match_score(
+    opponent_attack,
+    opponent_progression,
+    opponent_possession,
+    opponent_defense,
+    opponent_pressing,
+    opponent_final,
+    opponent_risk
 )
 
 overall_score = round(
     (team_score + opponent_score) / 2,
     2
 )
-
 # =========================
 # MATCH OVERVIEW
 # =========================
