@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.title("Ball Loss Analysis")
+st.title("Ball Pressure & Recovery Analysis")
 
 UCLUJ_TEAM_ID = 60374
 
@@ -16,7 +16,10 @@ player_df = pd.read_csv("player_stats.csv")
 # CHECK REQUIRED COLUMNS
 # =========================
 
-required_cols = ["losses"]
+required_cols = [
+    "recoveries",
+    "interceptions"
+]
 
 missing_cols = [
     c for c in required_cols
@@ -30,11 +33,6 @@ if len(missing_cols) > 0:
     )
 
     st.stop()
-
-# Optional columns
-
-has_own_half = "ownHalfLosses" in player_df.columns
-has_danger = "dangerousOwnHalfLosses" in player_df.columns
 
 # =========================
 # FILTER U CLUJ DATA
@@ -53,173 +51,172 @@ if len(ucluj_players) == 0:
     st.stop()
 
 # =========================
-# LOSS ZONE DISTRIBUTION
+# TEAM DEFENSIVE PRESSURE
 # =========================
 
-st.header("Ball Loss Zones Distribution")
+st.header("Defensive Pressure Overview")
 
-total_losses = ucluj_players["losses"].sum()
+total_interceptions = ucluj_players[
+    "interceptions"
+].sum()
 
-own_losses = (
-    ucluj_players["ownHalfLosses"].sum()
-    if has_own_half
-    else 0
-)
+total_recoveries = ucluj_players[
+    "recoveries"
+].sum()
 
-danger_losses = (
-    ucluj_players["dangerousOwnHalfLosses"].sum()
-    if has_danger
-    else 0
-)
+pressure_df = pd.DataFrame({
 
-loss_zone_df = pd.DataFrame({
-
-    "Zone": [
-        "Total Losses",
-        "Own Half Losses",
-        "Dangerous Own Half Losses"
+    "Metric": [
+        "Interceptions",
+        "Recoveries"
     ],
 
     "Value": [
-        total_losses,
-        own_losses,
-        danger_losses
+        total_interceptions,
+        total_recoveries
     ]
 
 })
 
-fig_loss_zone = px.bar(
-    loss_zone_df,
-    x="Zone",
+fig_pressure = px.bar(
+
+    pressure_df,
+
+    x="Metric",
+
     y="Value",
-    title="Ball Loss Zones Overview"
+
+    title="Team Defensive Pressure"
+
 )
 
-st.plotly_chart(fig_loss_zone)
+st.plotly_chart(fig_pressure)
 
 # =========================
-# TOP LOSS PLAYERS
+# TOP DEFENSIVE PLAYERS
 # =========================
 
-st.header("Top Players with Most Ball Losses")
+st.header("Top Defensive Players")
 
-player_loss_df = (
+player_def_df = (
     ucluj_players
     .groupby("playerName")[
-        ["losses"]
+        [
+            "interceptions",
+            "recoveries"
+        ]
     ]
     .sum()
     .reset_index()
 )
 
-player_loss_df = player_loss_df.sort_values(
-    by="losses",
+player_def_df["defensive_score"] = (
+
+    player_def_df["interceptions"] * 1.2 +
+
+    player_def_df["recoveries"] * 1.0
+
+)
+
+player_def_df = player_def_df.sort_values(
+
+    by="defensive_score",
+
     ascending=False
+
 )
 
 st.dataframe(
-    player_loss_df.head(10)
+
+    player_def_df.head(10)
+
 )
 
 # =========================
-# LOSS TREND PER MATCH
+# MATCH DEFENSIVE TREND
 # =========================
 
-st.header("Ball Loss Trend per Match")
+st.header("Defensive Trend per Match")
 
 if "match" in ucluj_players.columns:
 
-    match_loss_df = (
+    match_def_df = (
+
         ucluj_players
+
         .groupby("match")[
-            ["losses"]
+            [
+                "interceptions",
+                "recoveries"
+            ]
         ]
+
         .sum()
+
         .reset_index()
+
     )
 
-    fig_match_losses = px.line(
-        match_loss_df,
+    fig_match = px.line(
+
+        match_def_df,
+
         x="match",
-        y="losses",
-        title="Ball Losses per Match"
+
+        y=[
+            "interceptions",
+            "recoveries"
+        ],
+
+        title="Defensive Actions per Match"
+
     )
 
-    st.plotly_chart(fig_match_losses)
+    st.plotly_chart(fig_match)
 
 else:
 
     st.info(
-        "Match column not available for trend analysis"
+        "Match column not available"
     )
 
 # =========================
-# LOSS RISK CLASSIFICATION
+# POSITION DEFENSIVE LOAD
 # =========================
 
-st.header("Loss Risk Classification")
-
-ucluj_players["loss_risk"] = pd.cut(
-
-    ucluj_players["losses"],
-
-    bins=[-1, 5, 15, 1000],
-
-    labels=[
-        "Low Risk",
-        "Medium Risk",
-        "High Risk"
-    ]
-
-)
-
-risk_distribution = (
-    ucluj_players
-    .groupby("loss_risk")
-    .size()
-    .reset_index(name="count")
-)
-
-fig_risk = px.pie(
-
-    risk_distribution,
-
-    names="loss_risk",
-
-    values="count",
-
-    title="Loss Risk Distribution"
-
-)
-
-st.plotly_chart(fig_risk)
-
-# =========================
-# POSITION LOSS ANALYSIS
-# =========================
-
-st.header("Ball Loss by Position")
+st.header("Defensive Load by Position")
 
 if "position" in ucluj_players.columns:
 
-    position_loss_df = (
+    position_df = (
+
         ucluj_players
+
         .groupby("position")[
-            ["losses"]
+            [
+                "interceptions",
+                "recoveries"
+            ]
         ]
+
         .sum()
+
         .reset_index()
+
     )
 
     fig_position = px.bar(
 
-        position_loss_df,
+        position_df,
 
         x="position",
 
-        y="losses",
+        y=[
+            "interceptions",
+            "recoveries"
+        ],
 
-        title="Ball Losses by Position"
+        title="Defensive Actions by Position"
 
     )
 
