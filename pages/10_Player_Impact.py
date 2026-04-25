@@ -11,20 +11,19 @@ st.title("Player Impact Analysis")
 # =========================
 
 UCLUJ_TEAM_ID = 60374
+UCLUJ_NAME = "Universitatea Cluj"
 
 metrics = [
-
     "goals",
     "assists",
     "shots",
     "passes",
     "interceptions",
     "recoveries"
-
 ]
 
 # =========================
-# LOAD MODEL (SAFE PATH)
+# LOAD MODEL
 # =========================
 
 BASE_DIR = os.path.dirname(
@@ -39,7 +38,7 @@ model_path = os.path.join(
 if not os.path.exists(model_path):
 
     st.error(
-        "player_impact_model.pkl not found in repository root."
+        "player_impact_model.pkl not found."
     )
 
     st.stop()
@@ -78,20 +77,12 @@ def clean_match(col):
 
     )
 
-if "match" not in player_df.columns:
-
-    st.error(
-        "player_stats.csv must contain 'match' column."
-    )
-
-    st.stop()
-
 player_df["match"] = clean_match(
     player_df["match"]
 )
 
 # =========================
-# FILTER STRICT U CLUJ
+# STRICT FILTER U CLUJ
 # =========================
 
 ucluj_players = player_df[
@@ -101,16 +92,31 @@ ucluj_players = player_df[
 
 ].copy()
 
+# IMPORTANT FIX:
+# păstrăm doar meciurile care conțin Universitatea Cluj
+
+ucluj_players = ucluj_players[
+
+    ucluj_players["match"]
+
+    .str.contains(
+        UCLUJ_NAME,
+        case=False,
+        na=False
+    )
+
+]
+
 if len(ucluj_players) == 0:
 
     st.error(
-        "No Universitatea Cluj players found."
+        "No Universitatea Cluj matches found."
     )
 
     st.stop()
 
 # =========================
-# MATCH SELECT
+# MATCH LIST
 # =========================
 
 match_list = sorted(
@@ -142,14 +148,6 @@ match_players = ucluj_players[
 
 ].copy()
 
-if len(match_players) == 0:
-
-    st.warning(
-        "No players found for selected match."
-    )
-
-    st.stop()
-
 # =========================
 # BUILD TEAM VECTOR
 # =========================
@@ -167,7 +165,7 @@ base_score = model.predict(
 )[0]
 
 # =========================
-# CALCULATE PLAYER IMPACT
+# PLAYER IMPACT CALCULATION
 # =========================
 
 impact_rows = []
@@ -211,15 +209,12 @@ impact_df = pd.DataFrame(
 )
 
 impact_df = impact_df.sort_values(
-
     by="impact_score",
-
     ascending=False
-
 )
 
 # =========================
-# DISPLAY TABLE
+# DISPLAY RESULTS
 # =========================
 
 st.header("Player Impact Ranking")
@@ -230,7 +225,7 @@ st.dataframe(
 )
 
 # =========================
-# TOP IMPACT PLAYERS
+# TOP PLAYERS
 # =========================
 
 st.header("Top Impact Players")
@@ -270,31 +265,22 @@ st.header("Most Critical Player")
 best_player = impact_df.iloc[0]
 
 st.metric(
-
     "Most Impactful Player",
-
     best_player["playerName"]
-
 )
 
 st.metric(
-
     "Impact Score",
-
     best_player["impact_score"]
-
 )
 
 # =========================
-# MATCH SCORE INFO
+# MATCH SCORE
 # =========================
 
-st.header("Match Tactical Impact")
+st.header("Match Tactical Score")
 
 st.metric(
-
     "Predicted Team Score",
-
     round(base_score, 2)
-
 )
