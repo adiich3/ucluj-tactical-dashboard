@@ -69,21 +69,8 @@ else:
         )
     ]
 
-    # =========================
-    # SELECT MATCH OR ALL
-    # =========================
+    st.dataframe(opponent_matches)
 
-    match_options = ["All Matches"] + sorted(opponent_matches["match"].unique())
-
-    selected_match = st.selectbox(
-        "Select Match",
-        match_options
-    )
-
-    # =========================
-    # FILTER MATCHES
-    # =========================
-    st.dataframe(filtered_matches)
     # =========================
     # OPPONENT PLAYER STATS
     # =========================
