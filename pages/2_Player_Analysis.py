@@ -94,7 +94,7 @@ st.subheader("Top Defensive Players")
 st.dataframe(top_defensive)
 
 # =========================
-# NORMALIZE
+# NORMALIZE DATA
 # =========================
 
 norm_players = filtered_players.copy()
@@ -111,7 +111,7 @@ for m in metrics:
         )
 
 # =========================
-# PROGRESSION
+# PLAYER PROGRESSION
 # =========================
 
 progression_rows = []
@@ -123,6 +123,9 @@ for player in norm_players["playerName"].unique():
     ]
 
     if len(p_data) < 4:
+        continue
+
+    if "match" not in p_data.columns:
         continue
 
     p_data = p_data.sort_values(
@@ -157,24 +160,26 @@ progression_df = pd.DataFrame(
     progression_rows
 )
 
-progression_df = progression_df.sort_values(
-    by="progress_score",
-    ascending=False
-)
+if len(progression_df) > 0:
 
-st.header("Player Progression")
+    progression_df = progression_df.sort_values(
+        by="progress_score",
+        ascending=False
+    )
 
-st.subheader("Top Improving")
+    st.header("Player Progression")
 
-st.dataframe(
-    progression_df.head(5)
-)
+    st.subheader("Top Improving")
 
-st.subheader("Top Regressing")
+    st.dataframe(
+        progression_df.head(5)
+    )
 
-st.dataframe(
-    progression_df.tail(5)
-)
+    st.subheader("Top Regressing")
+
+    st.dataframe(
+        progression_df.tail(5)
+    )
 
 # =========================
 # EXPORT CSV
@@ -182,19 +187,21 @@ st.dataframe(
 
 st.header("Export Data")
 
-csv = progression_df.to_csv(
-    index=False
-).encode("utf-8")
+if len(progression_rows) > 0:
 
-st.download_button(
-    label="Download Progression Report",
-    data=csv,
-    file_name="player_progression_report.csv",
-    mime="text/csv"
-)
+    csv = progression_df.to_csv(
+        index=False
+    ).encode("utf-8")
+
+    st.download_button(
+        label="Download Progression Report",
+        data=csv,
+        file_name="player_progression_report.csv",
+        mime="text/csv"
+    )
 
 # =========================
-# PLAYER RADAR
+# PLAYER RADAR (FIXED)
 # =========================
 
 st.header("Player Radar")
@@ -206,46 +213,103 @@ player_list = sorted(
 
 selected_player = st.selectbox(
     "Select Player",
-    player_list
+    player_list,
+    key="radar_player"
 )
 
-player_data = filtered_players[
-    filtered_players["playerName"]
-    == selected_player
-]
+# Aggregate per player
 
-avg_values = []
+player_summary = (
+
+    filtered_players
+
+    .groupby("playerName")[metrics]
+
+    .mean()
+
+    .reset_index()
+
+)
+
+# Normalize values
+
+norm_summary = player_summary.copy()
 
 for m in metrics:
 
-    avg_values.append(
-        player_data[m].mean()
+    max_val = norm_summary[m].max()
+
+    if max_val > 0:
+
+        norm_summary[m] = (
+
+            norm_summary[m]
+
+            /
+
+            max_val
+
+        )
+
+selected_row = norm_summary[
+
+    norm_summary["playerName"]
+
+    == selected_player
+
+]
+
+radar_values = []
+
+for m in metrics:
+
+    radar_values.append(
+
+        selected_row[m].values[0]
+
     )
 
 radar_df = pd.DataFrame({
-    "Metric": metrics,
-    "Value": avg_values
+
+    "Metric": [
+        "Goals",
+        "Assists",
+        "Shots",
+        "Passing",
+        "Interceptions",
+        "Recoveries"
+    ],
+
+    "Value": radar_values
+
 })
 
 fig_radar = px.line_polar(
+
     radar_df,
+
     r="Value",
+
     theta="Metric",
+
     line_close=True
+
 )
 
-st.plotly_chart(fig_radar)
+fig_radar.update_traces(
+    fill="toself"
+)
+
+st.plotly_chart(
+    fig_radar,
+    use_container_width=True
+)
 
 # =========================
-# PLAYER COMPARISON TOOL
+# PLAYER COMPARISON
 # =========================
 
 st.header("Player Comparison")
-
-player_list = sorted(
-    filtered_players["playerName"]
-    .unique()
-)
 
 col1, col2 = st.columns(2)
 
@@ -274,19 +338,6 @@ player2_data = filtered_players[
     filtered_players["playerName"] == player_2
 ]
 
-# =========================
-# CALCULATE AVERAGES
-# =========================
-
-metrics = [
-    "goals",
-    "assists",
-    "shots",
-    "passes",
-    "interceptions",
-    "recoveries"
-]
-
 p1_values = []
 p2_values = []
 
@@ -299,10 +350,6 @@ for m in metrics:
     p2_values.append(
         player2_data[m].mean()
     )
-
-# =========================
-# RADAR COMPARISON
-# =========================
 
 radar_compare_df = pd.DataFrame({
     "Metric": metrics * 2,
@@ -322,11 +369,11 @@ fig_compare = px.line_polar(
     line_close=True
 )
 
-st.plotly_chart(fig_compare)
+fig_compare.update_traces(
+    fill="toself"
+)
 
-# =========================
-# TABLE COMPARISON
-# =========================
+st.plotly_chart(fig_compare)
 
 st.subheader("Metric Comparison Table")
 
