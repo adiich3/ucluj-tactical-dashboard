@@ -142,8 +142,6 @@ filtered_players["performance_score"] = (
 # PLAYER SUMMARY
 # =========================
 
-st.header("Player Overview")
-
 player_summary = (
     filtered_players
     .groupby("playerName")
@@ -160,7 +158,6 @@ player_summary = (
     .reset_index()
 )
 
-# Remove only players with absolutely no useful actions
 player_summary = player_summary[
     player_summary[metrics].sum(axis=1) > 0
 ].copy()
@@ -169,13 +166,245 @@ if len(player_summary) == 0:
     st.warning("No useful player data found for this scope.")
     st.stop()
 
+# =========================
+# ADVANCED FOOTBALL INDICES
+# =========================
+
+def normalize(series):
+    max_val = series.max()
+
+    if max_val == 0:
+        return series * 0
+
+    return series / max_val
+
+
+player_summary["attacking_index"] = normalize(
+    player_summary["goals"] * 5.0
+    +
+    player_summary["assists"] * 3.0
+    +
+    player_summary["shots"] * 1.5
+)
+
+player_summary["creativity_index"] = normalize(
+    player_summary["assists"] * 5.0
+    +
+    player_summary["passes"] * 0.06
+    +
+    player_summary["shots"] * 0.4
+)
+
+player_summary["possession_index"] = normalize(
+    player_summary["passes"] * 0.10
+    +
+    player_summary["recoveries"] * 0.45
+)
+
+player_summary["defensive_index"] = normalize(
+    player_summary["interceptions"] * 1.5
+    +
+    player_summary["recoveries"] * 1.1
+)
+
+player_summary["pressing_index"] = normalize(
+    player_summary["recoveries"] * 1.3
+    +
+    player_summary["interceptions"] * 0.8
+    +
+    player_summary["shots"] * 0.2
+)
+
+player_summary["overall_index"] = (
+    player_summary["attacking_index"] * 0.25
+    +
+    player_summary["creativity_index"] * 0.20
+    +
+    player_summary["possession_index"] * 0.20
+    +
+    player_summary["defensive_index"] * 0.20
+    +
+    player_summary["pressing_index"] * 0.15
+)
+
+advanced_metrics = [
+    "attacking_index",
+    "creativity_index",
+    "possession_index",
+    "defensive_index",
+    "pressing_index"
+]
+
+advanced_labels = {
+    "attacking_index": "Attacking Impact",
+    "creativity_index": "Creativity",
+    "possession_index": "Possession",
+    "defensive_index": "Defensive Activity",
+    "pressing_index": "Pressing / Recovery"
+}
+
+# =========================
+# ROLE DETECTION
+# =========================
+
+def detect_position_group(position):
+
+    position_lower = str(position).lower()
+
+    if (
+        "goalkeeper" in position_lower
+        or position_lower == "gk"
+    ):
+        return "goalkeeper"
+
+    if (
+        "forward" in position_lower
+        or "striker" in position_lower
+        or "attacker" in position_lower
+        or position_lower in ["fw", "st", "cf", "lw", "rw"]
+    ):
+        return "forward"
+
+    if (
+        "midfielder" in position_lower
+        or position_lower in ["mf", "cm", "dm", "am", "cdm", "cam"]
+    ):
+        return "midfielder"
+
+    if (
+        "defender" in position_lower
+        or position_lower in ["df", "cb", "lb", "rb", "wb", "lwb", "rwb"]
+        or "back" in position_lower
+    ):
+        return "defender"
+
+    return "unknown"
+
+
+def detect_tactical_role(row):
+
+    position_group = detect_position_group(row["position"])
+
+    attack = row["attacking_index"]
+    creativity = row["creativity_index"]
+    possession = row["possession_index"]
+    defense = row["defensive_index"]
+    pressing = row["pressing_index"]
+
+    if position_group == "forward":
+
+        scores = {
+            "Finisher": attack,
+            "Creative Forward": creativity,
+            "Pressing Forward": pressing,
+            "Link-up Forward": possession
+        }
+
+    elif position_group == "midfielder":
+
+        scores = {
+            "Creative Midfielder": creativity,
+            "Possession Connector": possession,
+            "Ball-Winning Midfielder": defense,
+            "Box-to-Box Midfielder": (
+                creativity + possession + defense + pressing
+            ) / 4
+        }
+
+    elif position_group == "defender":
+
+        scores = {
+            "Defensive Ball-Winner": defense,
+            "Build-up Defender": possession,
+            "Advanced Full-back": (
+                creativity + possession + pressing
+            ) / 3,
+            "Conservative Defender": (
+                defense + possession
+            ) / 2
+        }
+
+    elif position_group == "goalkeeper":
+
+        scores = {
+            "Goalkeeper - Limited Model": row["overall_index"]
+        }
+
+    else:
+
+        scores = {
+            "Attacking Profile": attack,
+            "Creative Profile": creativity,
+            "Possession Profile": possession,
+            "Defensive Profile": defense,
+            "Pressing Profile": pressing
+        }
+
+    return max(scores, key=scores.get)
+
+
+player_summary["tactical_role"] = player_summary.apply(
+    detect_tactical_role,
+    axis=1
+)
+
 player_summary = player_summary.sort_values(
-    by="performance_score",
+    by="overall_index",
     ascending=False
 )
 
+# =========================
+# PLAYER OVERVIEW
+# =========================
+
+st.header("Player Overview")
+
+overview_columns = [
+    "playerName",
+    "position",
+    "tactical_role",
+    "goals",
+    "assists",
+    "shots",
+    "passes",
+    "interceptions",
+    "recoveries",
+    "performance_score",
+    "overall_index"
+]
+
 st.dataframe(
+    player_summary[overview_columns],
+    use_container_width=True
+)
+
+# =========================
+# TEAM PROFILE MAP
+# =========================
+
+st.header("Team Tactical Profile Map")
+
+fig_map = px.scatter(
     player_summary,
+    x="attacking_index",
+    y="defensive_index",
+    size="overall_index",
+    color="tactical_role",
+    hover_name="playerName",
+    hover_data=[
+        "position",
+        "goals",
+        "assists",
+        "shots",
+        "passes",
+        "interceptions",
+        "recoveries"
+    ],
+    title="Attacking Impact vs Defensive Activity"
+)
+
+st.plotly_chart(
+    fig_map,
     use_container_width=True
 )
 
@@ -190,9 +419,9 @@ top_players = player_summary.head(5)
 fig_top = px.bar(
     top_players,
     x="playerName",
-    y="performance_score",
-    color="position",
-    title="Top Players by Performance Score"
+    y="overall_index",
+    color="tactical_role",
+    title="Top Players by Overall Index"
 )
 
 st.plotly_chart(
@@ -236,15 +465,20 @@ with col3:
     st.metric("Recoveries", int(selected_player_data["recoveries"]))
 
 st.metric(
-    "Performance Score",
-    round(selected_player_data["performance_score"], 2)
+    "Overall Index",
+    round(selected_player_data["overall_index"], 3)
+)
+
+st.metric(
+    "Detected Role",
+    selected_player_data["tactical_role"]
 )
 
 # =========================
-# PLAYER RADAR
+# PLAYER RADAR RAW
 # =========================
 
-st.subheader("Player Radar")
+st.subheader("Player Raw Stats Radar")
 
 radar_values = []
 
@@ -270,7 +504,8 @@ fig_radar = px.line_polar(
     radar_df,
     r="Value",
     theta="Metric",
-    line_close=True
+    line_close=True,
+    title="Raw Statistical Profile"
 )
 
 fig_radar.update_traces(
@@ -279,6 +514,38 @@ fig_radar.update_traces(
 
 st.plotly_chart(
     fig_radar,
+    use_container_width=True
+)
+
+# =========================
+# PLAYER RADAR ADVANCED
+# =========================
+
+st.subheader("Player Tactical Radar")
+
+advanced_radar_df = pd.DataFrame({
+    "Metric": [
+        advanced_labels[m] for m in advanced_metrics
+    ],
+    "Value": [
+        selected_player_data[m] for m in advanced_metrics
+    ]
+})
+
+fig_adv_radar = px.line_polar(
+    advanced_radar_df,
+    r="Value",
+    theta="Metric",
+    line_close=True,
+    title="Advanced Tactical Profile"
+)
+
+fig_adv_radar.update_traces(
+    fill="toself"
+)
+
+st.plotly_chart(
+    fig_adv_radar,
     use_container_width=True
 )
 
@@ -313,6 +580,8 @@ p2 = player_summary[
     player_summary["playerName"] == player_2
 ].iloc[0]
 
+st.subheader("Raw Comparison")
+
 comparison_table = pd.DataFrame({
     "Metric": metrics + ["performance_score"],
     player_1: [p1[m] for m in metrics] + [p1["performance_score"]],
@@ -324,17 +593,38 @@ st.dataframe(
     use_container_width=True
 )
 
+st.subheader("Advanced Tactical Comparison")
+
+advanced_table = pd.DataFrame({
+    "Metric": [
+        advanced_labels[m] for m in advanced_metrics
+    ],
+    player_1: [
+        round(p1[m], 3) for m in advanced_metrics
+    ],
+    player_2: [
+        round(p2[m], 3) for m in advanced_metrics
+    ]
+})
+
+st.dataframe(
+    advanced_table,
+    use_container_width=True
+)
+
 compare_df = pd.DataFrame({
-    "Metric": metrics * 2,
+    "Metric": [
+        advanced_labels[m] for m in advanced_metrics
+    ] * 2,
     "Value": (
-        [p1[m] for m in metrics]
+        [p1[m] for m in advanced_metrics]
         +
-        [p2[m] for m in metrics]
+        [p2[m] for m in advanced_metrics]
     ),
     "Player": (
-        [player_1] * len(metrics)
+        [player_1] * len(advanced_metrics)
         +
-        [player_2] * len(metrics)
+        [player_2] * len(advanced_metrics)
     )
 })
 
@@ -343,7 +633,8 @@ fig_compare = px.line_polar(
     r="Value",
     theta="Metric",
     color="Player",
-    line_close=True
+    line_close=True,
+    title="Advanced Player Comparison"
 )
 
 fig_compare.update_traces(
@@ -354,6 +645,50 @@ st.plotly_chart(
     fig_compare,
     use_container_width=True
 )
+
+# =========================
+# SIMILAR PLAYER FINDER
+# =========================
+
+st.header("Similar Player Finder")
+
+selected_vector = selected_player_data[advanced_metrics].values.astype(float)
+
+similarity_rows = []
+
+for _, row in player_summary.iterrows():
+
+    if row["playerName"] == selected_player:
+        continue
+
+    other_vector = row[advanced_metrics].values.astype(float)
+
+    distance = np.linalg.norm(
+        selected_vector - other_vector
+    )
+
+    similarity = 1 / (1 + distance)
+
+    similarity_rows.append({
+        "playerName": row["playerName"],
+        "position": row["position"],
+        "tactical_role": row["tactical_role"],
+        "similarity_score": round(similarity, 3)
+    })
+
+similarity_df = pd.DataFrame(similarity_rows)
+
+if len(similarity_df) > 0:
+
+    similarity_df = similarity_df.sort_values(
+        by="similarity_score",
+        ascending=False
+    )
+
+    st.dataframe(
+        similarity_df.head(5),
+        use_container_width=True
+    )
 
 # =========================
 # AI PLAYER INSIGHT
@@ -375,40 +710,6 @@ def percentile_rank(series, value):
     )
 
 
-def detect_position_group(position):
-
-    position_lower = str(position).lower()
-
-    if (
-        "goalkeeper" in position_lower
-        or position_lower == "gk"
-    ):
-        return "goalkeeper"
-
-    if (
-        "forward" in position_lower
-        or "striker" in position_lower
-        or "attacker" in position_lower
-        or position_lower in ["fw", "st", "cf", "lw", "rw"]
-    ):
-        return "forward"
-
-    if (
-        "midfielder" in position_lower
-        or position_lower in ["mf", "cm", "dm", "am", "cdm", "cam"]
-    ):
-        return "midfielder"
-
-    if (
-        "defender" in position_lower
-        or position_lower in ["df", "cb", "lb", "rb", "wb", "lwb", "rwb"]
-        or "back" in position_lower
-    ):
-        return "defender"
-
-    return "unknown"
-
-
 def generate_player_insight(player):
 
     name = player["playerName"]
@@ -421,374 +722,210 @@ def generate_player_insight(player):
     passes = player["passes"]
     interceptions = player["interceptions"]
     recoveries = player["recoveries"]
-    score = player["performance_score"]
+
+    role = player["tactical_role"]
 
     goal_pct = percentile_rank(player_summary["goals"], goals)
     assist_pct = percentile_rank(player_summary["assists"], assists)
     shot_pct = percentile_rank(player_summary["shots"], shots)
     pass_pct = percentile_rank(player_summary["passes"], passes)
-    interception_pct = percentile_rank(player_summary["interceptions"], interceptions)
-    recovery_pct = percentile_rank(player_summary["recoveries"], recoveries)
-    score_pct = percentile_rank(player_summary["performance_score"], score)
-
-    # Role scores based on percentiles, not raw values
-    finisher_score = (
-        goal_pct * 0.55
-        +
-        shot_pct * 0.35
-        +
-        assist_pct * 0.10
+    interception_pct = percentile_rank(
+        player_summary["interceptions"],
+        interceptions
+    )
+    recovery_pct = percentile_rank(
+        player_summary["recoveries"],
+        recoveries
+    )
+    overall_pct = percentile_rank(
+        player_summary["overall_index"],
+        player["overall_index"]
     )
 
-    creative_score = (
-        assist_pct * 0.45
-        +
-        shot_pct * 0.25
-        +
-        pass_pct * 0.30
+    best_advanced_metric = max(
+        advanced_metrics,
+        key=lambda m: player[m]
     )
 
-    possession_score = (
-        pass_pct * 0.70
-        +
-        assist_pct * 0.15
-        +
-        recovery_pct * 0.15
+    weakest_advanced_metric = min(
+        advanced_metrics,
+        key=lambda m: player[m]
     )
-
-    pressing_score = (
-        recovery_pct * 0.55
-        +
-        interception_pct * 0.30
-        +
-        shot_pct * 0.15
-    )
-
-    defensive_score = (
-        interception_pct * 0.55
-        +
-        recovery_pct * 0.35
-        +
-        pass_pct * 0.10
-    )
-
-    build_up_defender_score = (
-        pass_pct * 0.45
-        +
-        interception_pct * 0.30
-        +
-        recovery_pct * 0.25
-    )
-
-    if position_group == "forward":
-
-        profiles = {
-            "Finisher / goal threat": finisher_score,
-            "Creative forward": creative_score,
-            "Pressing forward": pressing_score,
-            "Link-up forward": possession_score
-        }
-
-    elif position_group == "midfielder":
-
-        profiles = {
-            "Creative midfielder": creative_score,
-            "Possession connector": possession_score,
-            "Ball-winning midfielder": defensive_score,
-            "Box-to-box contributor": (
-                creative_score
-                +
-                possession_score
-                +
-                defensive_score
-            ) / 3
-        }
-
-    elif position_group == "defender":
-
-        profiles = {
-            "Defensive ball-winner": defensive_score,
-            "Build-up defender": build_up_defender_score,
-            "Possession defender": possession_score,
-            "Attacking full-back / advanced defender": (
-                assist_pct * 0.35
-                +
-                shot_pct * 0.25
-                +
-                pass_pct * 0.40
-            )
-        }
-
-    elif position_group == "goalkeeper":
-
-        profiles = {
-            "Goalkeeper - limited model": score_pct
-        }
-
-    else:
-
-        profiles = {
-            "Finisher / goal threat": finisher_score,
-            "Creative player": creative_score,
-            "Possession connector": possession_score,
-            "Defensive ball-winner": defensive_score,
-            "Pressing player": pressing_score
-        }
-
-    sorted_profiles = sorted(
-        profiles.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )
-
-    main_profile = sorted_profiles[0][0]
-    secondary_profile = sorted_profiles[1][0] if len(sorted_profiles) > 1 else "N/A"
-
-    strengths = []
-
-    if goals > 0 and goal_pct >= 60:
-        strengths.append("real goal contribution")
-
-    if shots > 0 and shot_pct >= 70:
-        strengths.append("frequent involvement in shooting situations")
-
-    if assists > 0 and assist_pct >= 60:
-        strengths.append("chance creation / final pass contribution")
-
-    if passes > 0 and pass_pct >= 70:
-        strengths.append("important involvement in ball circulation")
-
-    if interceptions > 0 and interception_pct >= 70:
-        strengths.append("good anticipation and defensive reading")
-
-    if recoveries > 0 and recovery_pct >= 70:
-        strengths.append("active recovery work after possession loss")
-
-    if len(strengths) == 0:
-
-        metric_percentiles = {
-            "goals": goal_pct,
-            "assists": assist_pct,
-            "shots": shot_pct,
-            "passes": pass_pct,
-            "interceptions": interception_pct,
-            "recoveries": recovery_pct
-        }
-
-        best_metric = max(
-            metric_percentiles,
-            key=metric_percentiles.get
-        )
-
-        strengths.append(
-            f"best relative contribution comes from {best_metric}"
-        )
-
-    limitations = []
-
-    if position_group == "forward" and goals == 0:
-        limitations.append("no goal contribution in the selected scope")
-
-    if position_group == "forward" and shots == 0:
-        limitations.append("low direct shooting presence")
-
-    if position_group == "midfielder" and passes < player_summary["passes"].median():
-        limitations.append("below-median passing involvement for the squad")
-
-    if position_group == "defender" and interceptions == 0 and recoveries == 0:
-        limitations.append("low visible defensive event volume")
-
-    if assists == 0 and position_group in ["forward", "midfielder"]:
-        limitations.append("no assist contribution in the selected scope")
-
-    if len(limitations) == 0:
-        limitations.append("no major statistical limitation visible in these metrics")
 
     text = f"""
-### {name} — AI Player Profile
+### {name} — AI Tactical Profile
 
 **Data position:** {position}  
-**Detected football role:** {main_profile}  
-**Secondary tendency:** {secondary_profile}  
-**Overall squad impact percentile:** {score_pct}%
+**Detected role:** {role}  
+**Overall squad impact percentile:** {overall_pct}%  
 
 """
 
     if position_group == "forward":
 
         text += f"""
-{name} is listed as a forward, so the model evaluates him mainly through attacking involvement: goals, shots, assists, link-up actions and pressing work.
+{name} is evaluated as an attacking player, so the model focuses mainly on goals, shots, assists, link-up actions and pressing from the front.
 
-His goal percentile is **{goal_pct}%** and his shot percentile is **{shot_pct}%**.  
+His goal percentile is **{goal_pct}%**, shot percentile is **{shot_pct}%**, and assist percentile is **{assist_pct}%**.
 """
 
         if goals == 0:
-            text += f"""
-He has **0 goals** in the selected scope, so he should not be described as a finisher here.
+            text += """
+He has **0 goals** in the selected scope, so the model does not treat him as a pure finisher.
 """
         else:
             text += f"""
-He scored **{int(goals)} goals**, so he has direct end-product in this scope.
+He has **{int(goals)} goals**, which gives him direct attacking end-product.
 """
 
-        if assists > 0:
-            text += f"""
-He also has **{int(assists)} assists**, which gives him a creative side, not only an attacking presence.
+        if role == "Creative Forward":
+            text += """
+The role suggests a forward who contributes more through chance creation and link-up than only finishing.
 """
 
-        if main_profile == "Pressing forward":
-            text += f"""
-The reason he is detected as a pressing forward is that his recovery/interception profile is high compared with the squad, while still being classified as an attacking player. That means defensive work from the front, not a defender role.
+        elif role == "Pressing Forward":
+            text += """
+The role suggests a forward who adds value through pressing, recoveries and defensive work from the front.
 """
 
-        if main_profile == "Creative forward":
-            text += f"""
-The profile suggests a forward who contributes more through chance creation, link-up and involvement around the final third than pure finishing.
+        elif role == "Link-up Forward":
+            text += """
+The role suggests a forward who helps connect midfield and attack.
+"""
+
+        elif role == "Finisher":
+            text += """
+The role suggests a forward with strong direct goal or shooting impact.
 """
 
     elif position_group == "midfielder":
 
         text += f"""
-{name} is evaluated as a midfielder. For this role, the model gives more importance to passing, assists, recoveries and interceptions.
+{name} is evaluated as a midfielder, where passing, creativity, recoveries and interceptions matter more than only goals.
 
-His passing percentile is **{pass_pct}%**, recovery percentile is **{recovery_pct}%**, and assist percentile is **{assist_pct}%**.
+His passing percentile is **{pass_pct}%**, assist percentile is **{assist_pct}%**, and recovery percentile is **{recovery_pct}%**.
 """
 
-        if main_profile == "Possession connector":
-            text += f"""
-This suggests that he is useful for keeping the ball moving and connecting defensive and attacking phases.
+        if role == "Creative Midfielder":
+            text += """
+The role suggests that his main value comes from chance creation and final-third connection.
 """
 
-        if main_profile == "Creative midfielder":
-            text += f"""
-This suggests that his strongest value is in chance creation and final-third support.
+        elif role == "Possession Connector":
+            text += """
+The role suggests that he helps U Cluj keep the ball moving and connect phases of play.
 """
 
-        if main_profile == "Ball-winning midfielder":
-            text += f"""
-This suggests that his main value comes from defensive activity and transition control.
+        elif role == "Ball-Winning Midfielder":
+            text += """
+The role suggests that he is useful in transition moments and defensive recovery.
+"""
+
+        elif role == "Box-to-Box Midfielder":
+            text += """
+The role suggests a balanced midfield profile with involvement in several phases.
 """
 
     elif position_group == "defender":
 
         text += f"""
-{name} is evaluated as a defender. For this role, interceptions, recoveries and passing involvement are more relevant than goals.
+{name} is evaluated as a defender, so the model prioritizes defensive activity, recoveries and build-up involvement.
 
 His interception percentile is **{interception_pct}%**, recovery percentile is **{recovery_pct}%**, and passing percentile is **{pass_pct}%**.
 """
 
-        if main_profile == "Build-up defender":
-            text += f"""
-This suggests that he is not only defending, but also helping the team progress or circulate the ball from deeper areas.
+        if role == "Build-up Defender":
+            text += """
+The role suggests that he contributes to circulation and controlled progression from the back.
 """
 
-        if main_profile == "Defensive ball-winner":
-            text += f"""
-This suggests that his strongest value is defensive presence and winning/regaining possession.
+        elif role == "Defensive Ball-Winner":
+            text += """
+The role suggests that his strongest value is defending and regaining possession.
+"""
+
+        elif role == "Advanced Full-back":
+            text += """
+The role suggests a defender with higher attacking or possession involvement.
+"""
+
+        elif role == "Conservative Defender":
+            text += """
+The role suggests a safer defensive profile with less attacking emphasis.
 """
 
     elif position_group == "goalkeeper":
 
-        text += f"""
-{name} is a goalkeeper, but this dataset does not contain goalkeeper-specific indicators such as saves, goals conceded, crosses claimed or distribution accuracy. The current model can only interpret limited possession-related involvement.
+        text += """
+This player is a goalkeeper. The current dataset does not include goalkeeper-specific features such as saves, claims, goals conceded or distribution accuracy, so the interpretation is limited.
 """
 
     else:
 
         text += f"""
-{name} has an unknown or mixed position label in the dataset. The model therefore classifies him mainly by statistical tendencies rather than by a strict tactical role.
+{name} has a mixed or unknown position label, so the model classifies him based on statistical tendencies rather than a strict role.
 """
 
     text += f"""
 
-**Main strengths:**
-- {strengths[0]}
-"""
+**Strongest tactical area:** {advanced_labels[best_advanced_metric]}  
+**Weakest tactical area:** {advanced_labels[weakest_advanced_metric]}  
 
-    if len(strengths) > 1:
-        text += f"- {strengths[1]}\n"
+**Advanced index values:**
+- Attacking Impact: **{round(player["attacking_index"], 3)}**
+- Creativity: **{round(player["creativity_index"], 3)}**
+- Possession: **{round(player["possession_index"], 3)}**
+- Defensive Activity: **{round(player["defensive_index"], 3)}**
+- Pressing / Recovery: **{round(player["pressing_index"], 3)}**
 
-    text += f"""
-
-**Possible limitation:**
-- {limitations[0]}
-
-**Metric percentiles inside U Cluj squad:**
+**Raw metric percentiles inside U Cluj squad:**
 - Goals: **{goal_pct}%**
 - Assists: **{assist_pct}%**
 - Shots: **{shot_pct}%**
 - Passes: **{pass_pct}%**
 - Interceptions: **{interception_pct}%**
 - Recoveries: **{recovery_pct}%**
-
 """
 
-    if main_profile == "Finisher / goal threat":
+    if role in ["Finisher", "Creative Forward", "Pressing Forward", "Link-up Forward"]:
+
         prediction = (
-            f"{name} should be used when U Cluj needs direct attacking threat and finishing presence."
+            f"{name} should be evaluated as an attacking option, but with the specific role of **{role}**. "
+            "This helps avoid treating every forward only as a goal scorer."
         )
 
-    elif main_profile == "Creative forward":
+    elif role in [
+        "Creative Midfielder",
+        "Possession Connector",
+        "Ball-Winning Midfielder",
+        "Box-to-Box Midfielder"
+    ]:
+
         prediction = (
-            f"{name} fits better as a creative attacking option, useful for link-up play and chance creation rather than only finishing."
+            f"{name} fits a midfield usage pattern of **{role}**. "
+            "His selection value depends on whether U Cluj needs creativity, control, or transition coverage."
         )
 
-    elif main_profile == "Pressing forward":
-        prediction = (
-            f"{name} is useful in matches where U Cluj wants pressure from the front and aggressive recovery after losing possession."
-        )
+    elif role in [
+        "Defensive Ball-Winner",
+        "Build-up Defender",
+        "Advanced Full-back",
+        "Conservative Defender"
+    ]:
 
-    elif main_profile == "Link-up forward":
         prediction = (
-            f"{name} can help connect midfield and attack, especially when the team needs attacking continuity."
-        )
-
-    elif main_profile == "Creative midfielder":
-        prediction = (
-            f"{name} should be valuable when the team needs more creativity and final-third connection."
-        )
-
-    elif main_profile == "Possession connector":
-        prediction = (
-            f"{name} is useful when U Cluj wants more control, safer possession and cleaner circulation."
-        )
-
-    elif main_profile == "Ball-winning midfielder":
-        prediction = (
-            f"{name} is useful in matches with many transitions, where recovering the ball quickly is important."
-        )
-
-    elif main_profile == "Box-to-box contributor":
-        prediction = (
-            f"{name} offers a balanced midfield profile and can contribute in multiple phases."
-        )
-
-    elif main_profile == "Defensive ball-winner":
-        prediction = (
-            f"{name} is valuable when U Cluj expects pressure and needs stronger defensive coverage."
-        )
-
-    elif main_profile == "Build-up defender":
-        prediction = (
-            f"{name} is useful when U Cluj wants defenders involved in build-up and controlled progression from the back."
-        )
-
-    elif main_profile == "Possession defender":
-        prediction = (
-            f"{name} can help the team keep possession from deeper areas and reduce chaotic clearances."
-        )
-
-    elif main_profile == "Attacking full-back / advanced defender":
-        prediction = (
-            f"{name} can be useful when U Cluj needs width, support in possession and advanced involvement from the defensive line."
+            f"{name} should be used according to his defensive profile: **{role}**. "
+            "This gives a better interpretation than comparing defenders only by goals or assists."
         )
 
     else:
+
         prediction = (
-            f"{name} has a mixed profile and should be evaluated together with match context and minutes played."
+            f"{name} should be interpreted carefully because the available dataset is limited for this role."
         )
 
     text += f"""
+
 **Prediction / tactical use:**  
 {prediction}
 """
