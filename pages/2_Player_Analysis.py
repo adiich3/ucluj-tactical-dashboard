@@ -9,29 +9,6 @@ UCLUJ_TEAM_ID = 60374
 UCLUJ_NAME = "Universitatea Cluj"
 
 player_df = pd.read_csv("player_stats.csv")
-# =========================
-# CLEAN MATCH NAMES
-# =========================
-
-if "match" in player_df.columns:
-
-    player_df["match"] = (
-
-        player_df["match"]
-        .astype(str)
-
-        .str.replace(".json", "", regex=False)
-
-        .str.replace("_players_stats", "", regex=False)
-
-        .str.replace("_", " ")
-
-        .str.strip()
-    )
-    
-ucluj_players = player_df[
-    player_df["teamId"] == UCLUJ_TEAM_ID
-].copy()
 
 metrics = [
     "goals",
@@ -63,6 +40,18 @@ for col in required_cols:
         st.stop()
 
 # =========================
+# ONLY U CLUJ PLAYERS
+# =========================
+
+ucluj_players = player_df[
+    player_df["teamId"] == UCLUJ_TEAM_ID
+].copy()
+
+if len(ucluj_players) == 0:
+    st.error("No Universitatea Cluj players found with this teamId.")
+    st.stop()
+
+# =========================
 # FILTERS
 # =========================
 
@@ -88,7 +77,7 @@ if analysis_scope == "Single Match":
         ucluj_players["match"]
         .astype(str)
         .str.contains(UCLUJ_NAME, case=False, na=False)
-    ]
+    ].copy()
 
     ucluj_match_list = sorted(
         ucluj_only_matches["match"]
@@ -109,7 +98,6 @@ if analysis_scope == "Single Match":
         ucluj_only_matches["match"] == selected_match
     ].copy()
 
-# IMPORTANT: positions from all U Cluj players, not only current match
 all_positions = sorted(
     ucluj_players["position"]
     .dropna()
@@ -129,11 +117,11 @@ else:
     filtered_players = base_players.copy()
 
 if len(filtered_players) == 0:
-    st.warning("No players found for this position in the selected scope.")
+    st.warning("No players found for this filter.")
     st.stop()
 
 # =========================
-# PERFORMANCE SCORE
+# PERFORMANCE SCORE PER ROW
 # =========================
 
 filtered_players["performance_score"] = (
@@ -151,44 +139,40 @@ filtered_players["performance_score"] = (
 )
 
 # =========================
-# PLAYER OVERVIEW
+# PLAYER SUMMARY
 # =========================
 
 st.header("Player Overview")
 
-if analysis_scope == "Full Season":
+# IMPORTANT:
+# Full Season = total season statistics, not average
+# Single Match = statistics from selected match
 
-    player_summary = (
-        filtered_players
-        .groupby(["playerName", "position"])[
-            metrics + ["performance_score"]
-        ]
-        .mean()
-        .reset_index()
-    )
-
-else:
-
-    player_summary = filtered_players[
-        [
-            "playerName",
-            "position",
-            "goals",
-            "assists",
-            "shots",
-            "passes",
-            "interceptions",
-            "recoveries",
-            "performance_score"
-        ]
-    ].copy()
+player_summary = (
+    filtered_players
+    .groupby("playerName")
+    .agg({
+        "position": "first",
+        "goals": "sum",
+        "assists": "sum",
+        "shots": "sum",
+        "passes": "sum",
+        "interceptions": "sum",
+        "recoveries": "sum",
+        "performance_score": "sum"
+    })
+    .reset_index()
+)
 
 player_summary = player_summary.sort_values(
     by="performance_score",
     ascending=False
 )
 
-st.dataframe(player_summary)
+st.dataframe(
+    player_summary,
+    use_container_width=True
+)
 
 # =========================
 # TOP PLAYERS
@@ -235,16 +219,16 @@ selected_player_data = player_summary[
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("Goals", round(selected_player_data["goals"], 2))
-    st.metric("Assists", round(selected_player_data["assists"], 2))
+    st.metric("Goals", int(selected_player_data["goals"]))
+    st.metric("Assists", int(selected_player_data["assists"]))
 
 with col2:
-    st.metric("Shots", round(selected_player_data["shots"], 2))
-    st.metric("Passes", round(selected_player_data["passes"], 2))
+    st.metric("Shots", int(selected_player_data["shots"]))
+    st.metric("Passes", int(selected_player_data["passes"]))
 
 with col3:
-    st.metric("Interceptions", round(selected_player_data["interceptions"], 2))
-    st.metric("Recoveries", round(selected_player_data["recoveries"], 2))
+    st.metric("Interceptions", int(selected_player_data["interceptions"]))
+    st.metric("Recoveries", int(selected_player_data["recoveries"]))
 
 st.metric(
     "Performance Score",
@@ -330,7 +314,10 @@ comparison_table = pd.DataFrame({
     player_2: [p2[m] for m in metrics] + [p2["performance_score"]]
 })
 
-st.dataframe(comparison_table)
+st.dataframe(
+    comparison_table,
+    use_container_width=True
+)
 
 compare_df = pd.DataFrame({
     "Metric": metrics * 2,
@@ -412,16 +399,16 @@ def generate_player_insight(player):
         strengths.append("good anticipation")
 
     if len(strengths) == 0:
-        strengths.append("balanced contribution")
+        strengths.append("limited statistical involvement")
 
     if score >= player_summary["performance_score"].quantile(0.75):
-        prediction = "Expected to remain an important player if this level is maintained."
+        prediction = "Expected to remain one of the important players in this analysis scope."
 
     elif score >= player_summary["performance_score"].median():
-        prediction = "Expected to be a useful rotation or support player."
+        prediction = "Expected to be a useful support or rotation player."
 
     else:
-        prediction = "Needs improvement or more minutes to become more influential."
+        prediction = "Needs more impact in the selected metrics to stand out."
 
     insight = f"""
 {name} is mainly profiled as a **{main_role}** for Universitatea Cluj.
@@ -436,7 +423,7 @@ Main strengths:
     insight += f"""
 
 Tactical interpretation:
-The player has a performance score of **{round(score, 2)}** in the selected analysis scope.
+The player has a total performance score of **{round(score, 2)}** in the selected analysis scope.
 
 Prediction:
 **{prediction}**
