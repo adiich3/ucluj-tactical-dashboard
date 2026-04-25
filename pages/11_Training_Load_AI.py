@@ -9,13 +9,24 @@ st.title("Training Load AI Dashboard")
 # LOAD DATA
 # =========================
 
-df = pd.read_csv(
-    "training_load_clean.csv"
-)
+try:
 
-weekly_df = pd.read_csv(
-    "weekly_training_load.csv"
-)
+    df = pd.read_csv(
+        "training_load_clean.csv"
+    )
+
+    weekly_df = pd.read_csv(
+        "weekly_training_load.csv"
+    )
+
+except Exception as e:
+
+    st.error("Training dataset not found.")
+    st.stop()
+
+# =========================
+# CHECK REQUIRED COLUMNS
+# =========================
 
 required_cols = [
     "Players",
@@ -32,7 +43,7 @@ for col in required_cols:
         st.stop()
 
 # =========================
-# PLAYER LOAD OVERVIEW
+# PLAYER SUMMARY
 # =========================
 
 st.header("Player Load Overview")
@@ -42,11 +53,13 @@ player_summary = (
     df
 
     .groupby("Players")[
+
         [
             "Total Load",
             "Load Intensity",
             "Fatigue Score"
         ]
+
     ]
 
     .mean()
@@ -56,12 +69,15 @@ player_summary = (
 )
 
 player_summary = player_summary.sort_values(
+
     by="Total Load",
     ascending=False
+
 )
 
 st.dataframe(
-    player_summary
+    player_summary,
+    use_container_width=True
 )
 
 # =========================
@@ -90,7 +106,7 @@ st.plotly_chart(
 )
 
 # =========================
-# FATIGUE RISK DETECTION
+# FATIGUE RISK
 # =========================
 
 st.header("Fatigue Risk Detection")
@@ -108,7 +124,8 @@ if len(high_fatigue) > 0:
     )
 
     st.dataframe(
-        high_fatigue
+        high_fatigue,
+        use_container_width=True
     )
 
 else:
@@ -123,38 +140,47 @@ else:
 
 st.header("Weekly Load Trend")
 
-fig_weekly = px.line(
+if "Week Calendar" in weekly_df.columns:
 
-    weekly_df,
+    fig_weekly = px.line(
 
-    x="Week Calendar",
+        weekly_df,
 
-    y="Total Load",
+        x="Week Calendar",
 
-    title="Weekly Training Load"
+        y="Total Load",
 
-)
+        title="Weekly Training Load"
 
-st.plotly_chart(
-    fig_weekly,
-    use_container_width=True
-)
+    )
+
+    st.plotly_chart(
+        fig_weekly,
+        use_container_width=True
+    )
 
 # =========================
-# PLAYER FATIGUE VIEW
+# INDIVIDUAL PLAYER VIEW
 # =========================
 
 st.header("Individual Player Load")
 
 player_list = sorted(
+
     df["Players"]
+
     .dropna()
+
     .unique()
+
 )
 
 selected_player = st.selectbox(
+
     "Select Player",
+
     player_list
+
 )
 
 player_data = df[
@@ -163,25 +189,27 @@ player_data = df[
 
 ]
 
-fig_player = px.line(
+if "Sessions" in player_data.columns:
 
-    player_data,
+    fig_player = px.line(
 
-    x="Sessions",
+        player_data,
 
-    y="Total Load",
+        x="Sessions",
 
-    title="Player Load per Session"
+        y="Total Load",
 
-)
+        title="Player Load per Session"
 
-st.plotly_chart(
-    fig_player,
-    use_container_width=True
-)
+    )
+
+    st.plotly_chart(
+        fig_player,
+        use_container_width=True
+    )
 
 # =========================
-# AI INJURY RISK INDICATOR
+# AI INJURY RISK
 # =========================
 
 st.header("AI Injury Risk Indicator")
@@ -189,9 +217,7 @@ st.header("AI Injury Risk Indicator")
 def calculate_injury_risk(row):
 
     fatigue = row["Fatigue Score"]
-
     intensity = row["Load Intensity"]
-
     load = row["Total Load"]
 
     risk = (
@@ -209,56 +235,73 @@ def calculate_injury_risk(row):
 player_summary["Injury Risk Score"] = (
 
     player_summary.apply(
+
         calculate_injury_risk,
+
         axis=1
+
     )
 
 )
 
-player_summary["Risk Level"] = np.where(
+def risk_level(score):
 
-    player_summary["Injury Risk Score"] > 7,
+    if score > 7:
+        return "HIGH"
 
-    "HIGH",
+    elif score > 4:
+        return "MEDIUM"
 
-    np.where(
+    else:
+        return "LOW"
 
-        player_summary["Injury Risk Score"] > 4,
+player_summary["Risk Level"] = (
 
-        "MEDIUM",
+    player_summary["Injury Risk Score"]
 
-        "LOW"
+    .apply(risk_level)
 
-    )
+)
+
+risk_df = player_summary.sort_values(
+
+    by="Injury Risk Score",
+
+    ascending=False
 
 )
 
 st.subheader("Player Injury Risk Ranking")
 
-risk_df = player_summary.sort_values(
-    by="Injury Risk Score",
-    ascending=False
-)
-
 st.dataframe(
+
     risk_df[
+
         [
+
             "Players",
+
             "Injury Risk Score",
+
             "Risk Level"
+
         ]
-    ]
+
+    ],
+
+    use_container_width=True
+
 )
 
 # =========================
-# HIGH SPEED LOAD LEADERS
+# HIGH SPEED LOAD
 # =========================
 
 if "Speed Zones (m) [25.0, 50.0]" in df.columns:
 
     st.header("High Speed Load Leaders")
 
-    high_speed_summary = (
+    speed_summary = (
 
         df
 
@@ -274,7 +317,7 @@ if "Speed Zones (m) [25.0, 50.0]" in df.columns:
 
     )
 
-    high_speed_summary = high_speed_summary.sort_values(
+    speed_summary = speed_summary.sort_values(
 
         by="Speed Zones (m) [25.0, 50.0]",
 
@@ -284,7 +327,7 @@ if "Speed Zones (m) [25.0, 50.0]" in df.columns:
 
     fig_speed = px.bar(
 
-        high_speed_summary.head(10),
+        speed_summary.head(10),
 
         x="Players",
 
@@ -317,4 +360,6 @@ st.download_button(
 
     file_name="training_load_report.csv",
 
-    mime
+    mime="text/csv"
+
+)
