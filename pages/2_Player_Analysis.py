@@ -6,6 +6,7 @@ import numpy as np
 st.title("Player Analysis")
 
 UCLUJ_TEAM_ID = 60374
+UCLUJ_NAME = "Universitatea Cluj"
 
 player_df = pd.read_csv("player_stats.csv")
 
@@ -42,6 +43,10 @@ for col in required_cols:
         st.error(f"Missing column: {col}")
         st.stop()
 
+# =========================
+# FILTERS
+# =========================
+
 st.header("Filters")
 
 analysis_scope = st.radio(
@@ -60,30 +65,41 @@ if analysis_scope == "Single Match":
         st.warning("The dataset does not contain a match column.")
         st.stop()
 
-    ucluj_match_list = sorted(
+    ucluj_only_matches = ucluj_players[
         ucluj_players["match"]
+        .astype(str)
+        .str.contains(UCLUJ_NAME, case=False, na=False)
+    ]
+
+    ucluj_match_list = sorted(
+        ucluj_only_matches["match"]
         .dropna()
         .unique()
     )
 
+    if len(ucluj_match_list) == 0:
+        st.warning("No Universitatea Cluj matches found.")
+        st.stop()
+
     selected_match = st.selectbox(
-        "Select U Cluj Match",
+        "Select Universitatea Cluj Match",
         ucluj_match_list
     )
 
-    base_players = ucluj_players[
-        ucluj_players["match"] == selected_match
+    base_players = ucluj_only_matches[
+        ucluj_only_matches["match"] == selected_match
     ].copy()
 
-positions = sorted(
-    base_players["position"]
+# IMPORTANT: positions from all U Cluj players, not only current match
+all_positions = sorted(
+    ucluj_players["position"]
     .dropna()
     .unique()
 )
 
 selected_position = st.selectbox(
     "Select Position",
-    ["All"] + positions
+    ["All"] + all_positions
 )
 
 if selected_position != "All":
@@ -94,8 +110,12 @@ else:
     filtered_players = base_players.copy()
 
 if len(filtered_players) == 0:
-    st.warning("No players found.")
+    st.warning("No players found for this position in the selected scope.")
     st.stop()
+
+# =========================
+# PERFORMANCE SCORE
+# =========================
 
 filtered_players["performance_score"] = (
     filtered_players["goals"] * 4
@@ -110,6 +130,10 @@ filtered_players["performance_score"] = (
     +
     filtered_players["recoveries"] * 1.2
 )
+
+# =========================
+# PLAYER OVERVIEW
+# =========================
 
 st.header("Player Overview")
 
@@ -147,6 +171,10 @@ player_summary = player_summary.sort_values(
 
 st.dataframe(player_summary)
 
+# =========================
+# TOP PLAYERS
+# =========================
+
 st.header("Top Player Contributions")
 
 top_players = player_summary.head(5)
@@ -163,6 +191,10 @@ st.plotly_chart(
     fig_top,
     use_container_width=True
 )
+
+# =========================
+# INDIVIDUAL PLAYER ANALYSIS
+# =========================
 
 st.header("Individual Player Analysis")
 
@@ -199,6 +231,10 @@ st.metric(
     "Performance Score",
     round(selected_player_data["performance_score"], 2)
 )
+
+# =========================
+# PLAYER RADAR
+# =========================
 
 st.subheader("Player Radar")
 
@@ -237,6 +273,10 @@ st.plotly_chart(
     fig_radar,
     use_container_width=True
 )
+
+# =========================
+# PLAYER COMPARISON
+# =========================
 
 st.header("Player Comparison")
 
@@ -304,6 +344,10 @@ st.plotly_chart(
     use_container_width=True
 )
 
+# =========================
+# AI PLAYER INSIGHT
+# =========================
+
 st.header("AI Player Insight")
 
 def generate_player_insight(player):
@@ -327,9 +371,11 @@ def generate_player_insight(player):
     if attacking_value >= defensive_value and attacking_value >= possession_value:
         main_role = "attacking contributor"
         strengths.append("strong offensive involvement")
+
     elif defensive_value >= attacking_value and defensive_value >= possession_value:
         main_role = "defensive contributor"
         strengths.append("good defensive activity")
+
     else:
         main_role = "possession-oriented player"
         strengths.append("important in ball circulation")
@@ -351,13 +397,15 @@ def generate_player_insight(player):
 
     if score >= player_summary["performance_score"].quantile(0.75):
         prediction = "Expected to remain an important player if this level is maintained."
+
     elif score >= player_summary["performance_score"].median():
         prediction = "Expected to be a useful rotation or support player."
+
     else:
         prediction = "Needs improvement or more minutes to become more influential."
 
     insight = f"""
-{name} is mainly profiled as a **{main_role}** for U Cluj.
+{name} is mainly profiled as a **{main_role}** for Universitatea Cluj.
 
 Main strengths:
 - {strengths[0]}
@@ -384,6 +432,10 @@ selected_ai_player = player_summary[
 st.markdown(
     generate_player_insight(selected_ai_player)
 )
+
+# =========================
+# EXPORT
+# =========================
 
 st.header("Export Data")
 
