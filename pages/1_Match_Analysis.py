@@ -86,7 +86,6 @@ vectors = vectors[
 # =========================
 
 match_list = sorted(
-
     reports["match"]
     .dropna()
     .unique()
@@ -254,11 +253,10 @@ raw_team_score = (
     0.15 * norm_risk
 )
 
-if raw_team_score < 0:
-    raw_team_score = 0
-
-if raw_team_score > 2:
-    raw_team_score = 2
+raw_team_score = max(
+    0,
+    min(raw_team_score, 2)
+)
 
 team_score = round(
     raw_team_score * 5,
@@ -356,16 +354,12 @@ st.header("Tactical Profile")
 radar_df = pd.DataFrame({
 
     "Metric": [
-
         feature_labels[f]
-
         for f in features
     ],
 
     "Value": [
-
         vector_row[f]
-
         for f in features
     ]
 })
@@ -417,3 +411,101 @@ top_similar = similar_df.head(3)
 for _, row in top_similar.iterrows():
 
     st.write("-", row["match"])
+
+# =========================
+# MATCH TAGS
+# =========================
+
+st.header("Match Tags")
+
+tags = []
+
+if norm_attack > 1.1:
+    tags.append("Strong Attack")
+
+if norm_defense < 0.9:
+    tags.append("Weak Defense")
+
+if norm_risk > 1.1:
+    tags.append("High Risk Build-up")
+
+if norm_progression > 1.1:
+    tags.append("Strong Progression")
+
+if norm_final > 1.1:
+    tags.append("High Final Third Presence")
+
+if len(tags) == 0:
+    tags.append("Balanced Match")
+
+for t in tags:
+
+    st.write("•", t)
+
+# =========================
+# STRENGTH BREAKDOWN
+# =========================
+
+st.header("Match Strength Breakdown")
+
+strength_df = pd.DataFrame({
+
+    "Category": [
+        "Attack",
+        "Defense",
+        "Possession",
+        "Progression",
+        "Pressing",
+        "Final Third",
+        "Risk"
+    ],
+
+    "Strength": [
+        norm_attack,
+        norm_defense,
+        norm_possession,
+        norm_progression,
+        norm_pressing,
+        norm_final,
+        norm_risk
+    ]
+})
+
+fig_strength = px.bar(
+    strength_df,
+    x="Category",
+    y="Strength"
+)
+
+st.plotly_chart(fig_strength)
+
+# =========================
+# TEAM PERFORMANCE SUMMARY
+# =========================
+
+st.header("Team Performance Summary")
+
+summary_df = pd.DataFrame({
+
+    "Metric": [
+        "Attack",
+        "Defense",
+        "Possession",
+        "Progression"
+    ],
+
+    "Score": [
+        norm_attack * 10,
+        norm_defense * 10,
+        norm_possession * 10,
+        norm_progression * 10
+    ]
+})
+
+fig_summary = px.bar(
+    summary_df,
+    x="Metric",
+    y="Score"
+)
+
+st.plotly_chart(fig_summary)
