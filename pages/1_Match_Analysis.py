@@ -5,6 +5,8 @@ from sklearn.metrics.pairwise import euclidean_distances
 
 st.title("Match Analysis")
 
+UCLUJ_TEAM_ID = 60374
+
 # =========================
 # DATA SOURCE SELECTOR
 # =========================
@@ -36,30 +38,6 @@ else:
     vectors = pd.read_csv(
         "ucluj_match_vectors.csv"
     )
-
-# =========================
-# STRICT U CLUJ FILTER
-# =========================
-
-if data_mode == "U Cluj Matches":
-
-    reports = reports[
-        reports["match"]
-        .str.contains(
-            "Universitatea Cluj",
-            case=False,
-            na=False
-        )
-    ].copy()
-
-    vectors = vectors[
-        vectors["match"]
-        .str.contains(
-            "Universitatea Cluj",
-            case=False,
-            na=False
-        )
-    ].copy()
 
 # =========================
 # SYNC DATASETS
@@ -135,7 +113,7 @@ vector_row = vectors[
 ].iloc[0]
 
 # =========================
-# FEATURE DEFINITIONS
+# FEATURES
 # =========================
 
 feature_labels = {
@@ -369,42 +347,6 @@ with col2:
         label="Team Tactical Score",
         value=f"{team_score} / 10"
     )
-
-# =========================
-# RADAR PROFILE
-# =========================
-
-st.header("Tactical Profile")
-
-radar_df = pd.DataFrame({
-
-    "Metric": [
-
-        feature_labels[f]
-
-        for f in features
-    ],
-
-    "Value": [
-
-        vector_row[f]
-
-        for f in features
-    ]
-})
-
-fig = px.line_polar(
-
-    radar_df,
-
-    r="Value",
-
-    theta="Metric",
-
-    line_close=True
-)
-
-st.plotly_chart(fig)
 
 # =========================
 # SIMILAR MATCHES
