@@ -37,6 +37,107 @@ else:
         "ucluj_match_vectors.csv"
     )
 
+# =========================
+# STRICT U CLUJ FILTER
+# =========================
+
+if data_mode == "U Cluj Matches":
+
+    reports = reports[
+        reports["match"]
+        .str.contains(
+            "Universitatea Cluj",
+            case=False,
+            na=False
+        )
+    ].copy()
+
+    vectors = vectors[
+        vectors["match"]
+        .str.contains(
+            "Universitatea Cluj",
+            case=False,
+            na=False
+        )
+    ].copy()
+
+# =========================
+# SYNC DATASETS
+# =========================
+
+common_matches = set(
+    reports["match"]
+).intersection(
+    set(vectors["match"])
+)
+
+reports = reports[
+    reports["match"]
+    .isin(common_matches)
+].copy()
+
+vectors = vectors[
+    vectors["match"]
+    .isin(common_matches)
+].copy()
+
+# =========================
+# MATCH LIST
+# =========================
+
+match_list = sorted(
+
+    reports["match"]
+    .dropna()
+    .unique()
+    .tolist()
+)
+
+st.caption(
+    f"Matches loaded: {len(match_list)}"
+)
+
+# =========================
+# SEARCH
+# =========================
+
+search_text = st.text_input(
+    "Search Match"
+)
+
+if search_text:
+
+    match_list = [
+
+        m for m in match_list
+
+        if search_text.lower()
+        in m.lower()
+    ]
+
+selected_match = st.selectbox(
+    "Select Match",
+    match_list
+)
+
+# =========================
+# MATCH ROWS
+# =========================
+
+match_row = reports[
+    reports["match"]
+    == selected_match
+].iloc[0]
+
+vector_row = vectors[
+    vectors["match"]
+    == selected_match
+].iloc[0]
+
+# =========================
+# FEATURE DEFINITIONS
+# =========================
+
 feature_labels = {
 
     "progression_index":
@@ -75,47 +176,6 @@ cluster_names = {
 
     3: "Dominant Attacking Match"
 }
-
-# =========================
-# SEARCH + MATCH SELECT
-# =========================
-
-match_list = sorted(
-
-    reports["match"]
-    .dropna()
-    .unique()
-    .tolist()
-)
-
-search_text = st.text_input(
-    "Search Match"
-)
-
-if search_text:
-
-    match_list = [
-
-        m for m in match_list
-
-        if search_text.lower()
-        in m.lower()
-    ]
-
-selected_match = st.selectbox(
-    "Select Match",
-    match_list
-)
-
-match_row = reports[
-    reports["match"]
-    == selected_match
-].iloc[0]
-
-vector_row = vectors[
-    vectors["match"]
-    == selected_match
-].iloc[0]
 
 # =========================
 # MATCH OVERVIEW
@@ -241,11 +301,8 @@ norm_risk = (
 # =========================
 
 attack_score = norm_attack * 10
-
 defense_score = norm_defense * 10
-
 possession_score = norm_possession * 10
-
 progression_score = norm_progression * 10
 
 team_score = (
@@ -314,48 +371,6 @@ with col2:
     )
 
 # =========================
-# MATCH TAGS
-# =========================
-
-st.header("Match Tags")
-
-tags = []
-
-if norm_attack > 1.1:
-
-    tags.append(
-        "Strong Attack"
-    )
-
-if norm_defense < 0.9:
-
-    tags.append(
-        "Weak Defense"
-    )
-
-if norm_risk > 1.1:
-
-    tags.append(
-        "High Risk Build-up"
-    )
-
-if norm_progression > 1.1:
-
-    tags.append(
-        "Strong Progression"
-    )
-
-if len(tags) == 0:
-
-    tags.append(
-        "Balanced Match"
-    )
-
-for t in tags:
-
-    st.write("•", t)
-
-# =========================
 # RADAR PROFILE
 # =========================
 
@@ -392,56 +407,6 @@ fig = px.line_polar(
 st.plotly_chart(fig)
 
 # =========================
-# METRIC COMPARISON
-# =========================
-
-st.header(
-    "Metric Comparison vs Season Average"
-)
-
-comparison_df = pd.DataFrame({
-
-    "Metric": [
-
-        feature_labels[f]
-
-        for f in features
-    ],
-
-    "Match Value": [
-
-        vector_row[f]
-
-        for f in features
-    ],
-
-    "Season Average": [
-
-        season_avg[f]
-
-        for f in features
-    ]
-})
-
-fig_bar = px.bar(
-
-    comparison_df,
-
-    x="Metric",
-
-    y=[
-
-        "Match Value",
-
-        "Season Average"
-    ],
-
-    barmode="group"
-)
-
-st.plotly_chart(fig_bar)
-
-# =========================
 # SIMILAR MATCHES
 # =========================
 
@@ -454,17 +419,13 @@ vector_matrix = vectors[
 ]
 
 match_index = vectors[
-
     vectors["match"]
-
     == selected_match
-
 ].index[0]
 
 distances = euclidean_distances(
 
     [vector_matrix.iloc[match_index]],
-
     vector_matrix
 )[0]
 
@@ -479,9 +440,7 @@ similar_df = similar_df.sort_values(
 )
 
 similar_df = similar_df[
-
     similar_df["match"]
-
     != selected_match
 ]
 
